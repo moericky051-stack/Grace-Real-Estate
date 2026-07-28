@@ -1,0 +1,569 @@
+package com.example.ui.screens
+
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.ui.components.PropertyImage
+import com.example.ui.theme.RealEstateGold
+import com.example.ui.theme.RealEstateNavy
+import java.io.File
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PostPropertyScreen(
+    onBackClick: () -> Unit,
+    onSubmitProperty: (
+        title: String,
+        listingType: String,
+        propertyType: String,
+        priceLakhs: Double,
+        pricePeriod: String,
+        city: String,
+        township: String,
+        address: String,
+        areaSqft: Int,
+        bedrooms: Int,
+        bathrooms: Int,
+        floorLevel: String,
+        furnishing: String,
+        deedType: String,
+        description: String,
+        agentName: String,
+        agentPhone: String,
+        imageResName: String?
+    ) -> Unit
+) {
+    val context = LocalContext.current
+
+    var title by remember { mutableStateOf("") }
+    var listingType by remember { mutableStateOf("BUY") } // BUY or RENT
+    var propertyType by remember { mutableStateOf("Condo") }
+    var priceLakhsText by remember { mutableStateOf("") }
+    var city by remember { mutableStateOf("Yangon") }
+    var township by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var areaSqftText by remember { mutableStateOf("") }
+    var bedrooms by remember { mutableStateOf("2") }
+    var bathrooms by remember { mutableStateOf("1") }
+    var floorLevel by remember { mutableStateOf("3rd Floor") }
+    var furnishing by remember { mutableStateOf("Fully Furnished") }
+    var deedType by remember { mutableStateOf("Grant Land (ဂရန်မြေ)") }
+    var description by remember { mutableStateOf("") }
+    var agentName by remember { mutableStateOf("") }
+    var agentPhone by remember { mutableStateOf("") }
+    var selectedImagePath by remember { mutableStateOf<String?>(null) }
+
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val savedPath = saveImageToInternalStorage(context, it)
+            if (savedPath != null) {
+                selectedImagePath = savedPath
+            }
+        }
+    }
+
+    val propertyTypes = listOf("Condo", "Apartment", "House", "Land", "Commercial")
+    val cities = listOf("Yangon", "Mandalay", "Naypyidaw", "Pyin Oo Lwin", "Taunggyi")
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        "အိမ်ခြံမြေ တင်မည် (Post Listing)",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = RealEstateNavy)
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(MaterialTheme.colorScheme.background)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+        ) {
+            // Form Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+
+                    // 1. Listing Type Toggle (ဝယ်ရန်/ရောင်းရန် vs ငှားရန်)
+                    Text("ကြော်ငြာအမျိုးအစား (Listing Type)", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = listingType == "BUY",
+                            onClick = { listingType = "BUY" },
+                            label = { Text("ဝယ်ရန်/ရောင်းရန် (Sale)") },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = RealEstateNavy,
+                                selectedLabelColor = RealEstateGold
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = listingType == "RENT",
+                            onClick = { listingType = "RENT" },
+                            label = { Text("ငှားရန် (Rent)") },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = RealEstateNavy,
+                                selectedLabelColor = RealEstateGold
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 2. Property Type
+                    Text("အိမ်ခြံမြေ အမျိုးအစား (Property Type)", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(propertyTypes) { type ->
+                            FilterChip(
+                                selected = propertyType == type,
+                                onClick = { propertyType = type },
+                                label = { Text(type) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = RealEstateNavy,
+                                    selectedLabelColor = RealEstateGold
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // PHOTO UPLOAD SECTION
+                    Text("ဓာတ်ပုံ တင်မည် (Photo Upload) *", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (selectedImagePath != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.LightGray)
+                        ) {
+                            PropertyImage(
+                                imageResName = selectedImagePath!!,
+                                contentDescription = "Selected Property Photo",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+
+                            // Remove photo icon
+                            Surface(
+                                color = Color.Black.copy(alpha = 0.6f),
+                                shape = CircleShape,
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .align(Alignment.TopEnd)
+                            ) {
+                                IconButton(onClick = { selectedImagePath = null }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Close,
+                                        contentDescription = "Remove Photo",
+                                        tint = Color.White
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                color = RealEstateNavy,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .align(Alignment.BottomStart)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = RealEstateGold, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("ဓာတ်ပုံ ရွေးချယ်ပြီးပါပြီ", color = Color.White, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = { photoPickerLauncher.launch("image/*") }) {
+                                Icon(Icons.Filled.PhotoLibrary, contentDescription = null, tint = RealEstateNavy, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("ဓာတ်ပုံ ပြောင်းလဲမည် (Change Photo)", color = RealEstateNavy, fontSize = 12.sp)
+                            }
+                        }
+                    } else {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { photoPickerLauncher.launch("image/*") },
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.AddPhotoAlternate,
+                                    contentDescription = "Add Photo",
+                                    tint = RealEstateNavy,
+                                    modifier = Modifier.size(44.dp)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "ဖုန်းထဲမှ ဓာတ်ပုံ တင်ရန် ဒီနေရာကို နှိပ်ပါ",
+                                    fontWeight = FontWeight.Bold,
+                                    color = RealEstateNavy,
+                                    fontSize = 14.sp
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "PNG, JPG သို့မဟုတ် JPEG ဓာတ်ပုံများ ရွေးချယ်နိုင်ပါသည်",
+                                    color = Color.Gray,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text("သို့မဟုတ် နမူနာ ဓာတ်ပုံများမှ ရွေးချယ်ပါ -", fontSize = 12.sp, color = Color.Gray)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        val sampleImages = listOf(
+                            "img_hero_banner" to "ကွန်ဒို",
+                            "img_property_villa" to "ဗီလာ/လုံးချင်း",
+                            "img_property_condo" to "ဇိမ်ခံတိုက်ခန်း",
+                            "img_property_apartment" to "အပါတ်မန့်"
+                        )
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(sampleImages) { (resName, label) ->
+                                FilterChip(
+                                    selected = selectedImagePath == resName,
+                                    onClick = { selectedImagePath = resName },
+                                    label = { Text(label, fontSize = 11.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = RealEstateNavy,
+                                        selectedLabelColor = RealEstateGold
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 3. Title Input
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = { Text("ကြော်ငြာ ခေါင်းစဉ် (Title) *") },
+                        placeholder = { Text("ဥပမာ - ကမာရွတ်မြို့နယ် ကွန်ဒို ပြင်ဆင်ပြီး ရောင်းမည်") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 4. Price Lakhs Input
+                    OutlinedTextField(
+                        value = priceLakhsText,
+                        onValueChange = { priceLakhsText = it },
+                        label = { Text("စျေးနှုန်း (သိန်းကျပ်) *") },
+                        placeholder = { Text("ဥပမာ - 3500 (သိန်း)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 5. City & Township Input
+                    Text("တည်နေရာ (Location)", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(cities) { c ->
+                            FilterChip(
+                                selected = city == c,
+                                onClick = { city = c },
+                                label = { Text(c) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = RealEstateNavy,
+                                    selectedLabelColor = RealEstateGold
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        value = township,
+                        onValueChange = { township = it },
+                        label = { Text("မြို့နယ် (Township) *") },
+                        placeholder = { Text("ဥပမာ - ကမာရွတ်၊ ဗဟန်း၊ စသည်") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        value = address,
+                        onValueChange = { address = it },
+                        label = { Text("အသေးစိတ် လိပ်စာ (Full Address)") },
+                        placeholder = { Text("ဥပမာ - လှိုင်မြစ်လမ်းမကြီးအနီး၊ ရန်ကုန်") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 6. Specs: Area, Bedrooms, Bathrooms
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = areaSqftText,
+                            onValueChange = { areaSqftText = it },
+                            label = { Text("စတုရန်းပေ") },
+                            placeholder = { Text("1200") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = bedrooms,
+                            onValueChange = { bedrooms = it },
+                            label = { Text("အိပ်ခန်း") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = bathrooms,
+                            onValueChange = { bathrooms = it },
+                            label = { Text("ရေချိုးခန်း") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Floor level & Furnishing
+                    OutlinedTextField(
+                        value = floorLevel,
+                        onValueChange = { floorLevel = it },
+                        label = { Text("အလွှာ/အထပ် (Floor/Level)") },
+                        placeholder = { Text("3rd Floor, 2-Story, Ground Floor") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = deedType,
+                        onValueChange = { deedType = it },
+                        label = { Text("စာရွက်စာတမ်း အထောက်အထား") },
+                        placeholder = { Text("ဂရန်မြေ၊ ဘိုးဘွားပိုင်၊ ကွန်ဒိုစာချုပ်") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 7. Description
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("အသေးစိတ် ဖော်ပြချက် (Description)") },
+                        placeholder = { Text("အိမ်ခြံမြေ၏ အားသာချက်များ၊ ပါဝင်သောအရာများကို ဖော်ပြပါ...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 8. Contact Person Info
+                    Text("ဆက်သွယ်ရန် ပိုင်ရှင် / အကျိုးဆောင်", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = agentName,
+                        onValueChange = { agentName = it },
+                        label = { Text("အမည် (Contact Name) *") },
+                        placeholder = { Text("ဥပမာ - ဦးမင်းသူ") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        value = agentPhone,
+                        onValueChange = { agentPhone = it },
+                        label = { Text("ဖုန်းနံပါတ် (Phone Number) *") },
+                        placeholder = { Text("09450012345") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    if (errorMessage != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = errorMessage!!,
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Submit Button
+                    Button(
+                        onClick = {
+                            val priceVal = priceLakhsText.toDoubleOrNull()
+                            if (title.isBlank()) {
+                                errorMessage = "ကျေးဇူးပြု၍ ခေါင်းစဉ် ရေးသားပါ"
+                                return@Button
+                            }
+                            if (priceVal == null || priceVal <= 0) {
+                                errorMessage = "ကျေးဇူးပြု၍ မှန်ကန်သော စျေးနှုန်း ရိုက်ထည့်ပါ"
+                                return@Button
+                            }
+                            if (township.isBlank()) {
+                                errorMessage = "ကျေးဇူးပြု၍ မြို့နယ် ဖြည့်စွက်ပါ"
+                                return@Button
+                            }
+                            if (agentPhone.isBlank()) {
+                                errorMessage = "ကျေးဇူးပြု၍ ဖုန်းနံပါတ် ဖြည့်စွက်ပါ"
+                                return@Button
+                            }
+
+                            errorMessage = null
+                            onSubmitProperty(
+                                title,
+                                listingType,
+                                propertyType,
+                                priceVal,
+                                if (listingType == "RENT") "PER_MONTH" else "TOTAL",
+                                city,
+                                township,
+                                address,
+                                areaSqftText.toIntOrNull() ?: 1000,
+                                bedrooms.toIntOrNull() ?: 2,
+                                bathrooms.toIntOrNull() ?: 1,
+                                floorLevel,
+                                furnishing,
+                                deedType,
+                                description.ifBlank { "အသေးစိတ် မေးမြန်းနိုင်ပါသည်။" },
+                                agentName,
+                                agentPhone,
+                                selectedImagePath
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RealEstateNavy),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Icon(Icons.Filled.Publish, contentDescription = "Publish", tint = RealEstateGold)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "ကြော်ငြာ အသစ် တင်မည် (Publish)",
+                            color = RealEstateGold,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun saveImageToInternalStorage(context: Context, uri: Uri): String? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val photosDir = File(context.filesDir, "property_photos")
+        if (!photosDir.exists()) {
+            photosDir.mkdirs()
+        }
+        val file = File(photosDir, "img_${System.currentTimeMillis()}.jpg")
+        file.outputStream().use { output ->
+            inputStream.copyTo(output)
+        }
+        file.absolutePath
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
