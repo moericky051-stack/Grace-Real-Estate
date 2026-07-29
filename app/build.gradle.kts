@@ -47,7 +47,13 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
+    debug { 
+      // debug.keystore ဖိုင်ရှိမှသာ သုံးမည်၊ မဟုတ်လျှင် Default Debug Keystore ကို အလိုအလျောက် သုံးပါမည်
+      val debugKeystore = file("${rootDir}/debug.keystore")
+      if (debugKeystore.exists()) {
+          signingConfig = signingConfigs.getByName("debugConfig")
+      }
+    }
   }
   
   compileOptions {
