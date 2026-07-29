@@ -1,6 +1,5 @@
 package com.example.ui.components
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,7 +17,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,15 +34,12 @@ fun PropertyCard(
     onFavoriteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val imageResId = context.resources.getIdentifier(
-        property.imageResName, "drawable", context.packageName
-    ).let { id -> if (id != 0) id else com.example.R.drawable.img_hero_banner }
+    val isRent = property.listingType == "RENT"
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(10.dp))
             .clickable { onCardClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -54,7 +49,7 @@ fun PropertyCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
+                    .height(105.dp)
             ) {
                 PropertyImage(
                     imageResName = property.imageResName,
@@ -69,43 +64,25 @@ fun PropertyCard(
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Black.copy(alpha = 0.4f), Color.Transparent, Color.Black.copy(alpha = 0.2f))
+                                colors = listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent, Color.Black.copy(alpha = 0.45f))
                             )
                         )
                 )
 
                 // Listing Type Tag Badge (BUY / RENT)
-                val isRent = property.listingType == "RENT"
                 Surface(
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(8.dp),
                     color = if (isRent) RealEstateBlue else RealEstateGreen,
                     modifier = Modifier
-                        .padding(12.dp)
+                        .padding(4.dp)
                         .align(Alignment.TopStart)
                 ) {
                     Text(
-                        text = if (isRent) "ငှားရန် (Rent)" else "ဝယ်ရန် (Sale)",
+                        text = if (isRent) "ငှား" else "ဝယ်",
                         color = Color.White,
-                        fontSize = 12.sp,
+                        fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
-                }
-
-                // Property Type Badge (e.g., Condo, Land)
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = RealEstateNavy.copy(alpha = 0.85f),
-                    modifier = Modifier
-                        .padding(top = 12.dp, start = 125.dp)
-                        .align(Alignment.TopStart)
-                ) {
-                    Text(
-                        text = property.propertyType,
-                        color = RealEstateGold,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                     )
                 }
 
@@ -113,44 +90,44 @@ fun PropertyCard(
                 IconButton(
                     onClick = onFavoriteClick,
                     modifier = Modifier
-                        .padding(8.dp)
+                        .padding(4.dp)
                         .align(Alignment.TopEnd)
-                        .size(36.dp)
+                        .size(24.dp)
                         .background(Color.White.copy(alpha = 0.9f), CircleShape)
                 ) {
                     Icon(
                         imageVector = if (property.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = "Favorite",
                         tint = if (property.isFavorite) Color.Red else Color.Gray,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(13.dp)
                     )
                 }
 
                 // Price Tag overlay at bottom left of image
                 Surface(
-                    shape = RoundedCornerShape(topEnd = 12.dp),
-                    color = RealEstateNavy,
+                    shape = RoundedCornerShape(topEnd = 8.dp),
+                    color = RealEstateNavy.copy(alpha = 0.9f),
                     modifier = Modifier.align(Alignment.BottomStart)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = if (property.priceLakhs >= 1000) {
-                                String.format("%.1f", property.priceLakhs / 1000.0) + " သောင်း"
+                                String.format("%.1f", property.priceLakhs / 1000.0) + "သောင်း"
                             } else {
-                                "${property.priceLakhs.toInt()} သိန်း"
+                                "${property.priceLakhs.toInt()}သိန်း"
                             },
                             color = RealEstateGold,
-                            fontSize = 16.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold
                         )
                         if (isRent) {
                             Text(
-                                text = " / လ",
+                                text = "/လ",
                                 color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 12.sp
+                                fontSize = 8.sp
                             )
                         }
                     }
@@ -158,16 +135,21 @@ fun PropertyCard(
             }
 
             // Details Content Area
-            Column(modifier = Modifier.padding(14.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(5.dp)
+            ) {
                 Text(
                     text = property.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    fontSize = 10.5.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
 
                 // Location row
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -175,23 +157,21 @@ fun PropertyCard(
                         imageVector = Icons.Filled.LocationOn,
                         contentDescription = "Location",
                         tint = RealEstateGold,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(11.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = "${property.township}, ${property.city}",
-                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 9.sp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-                // Property Specs Row (Area, Beds, Baths, Floor)
+                // Property Specs Row (Area, Beds, Baths)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -199,18 +179,18 @@ fun PropertyCard(
                 ) {
                     SpecChip(
                         icon = Icons.Filled.SquareFoot,
-                        label = "${property.areaSqft} sqft"
+                        label = "${property.areaSqft}"
                     )
                     if (property.bedrooms > 0) {
                         SpecChip(
                             icon = Icons.Filled.Bed,
-                            label = "${property.bedrooms} အိပ်ခန်း"
+                            label = "${property.bedrooms}ခန်း"
                         )
                     }
                     if (property.bathrooms > 0) {
                         SpecChip(
                             icon = Icons.Filled.Bathtub,
-                            label = "${property.bathrooms} ရေချိုးခန်း"
+                            label = "${property.bathrooms}"
                         )
                     }
                 }
@@ -229,14 +209,15 @@ private fun SpecChip(
             imageVector = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-            modifier = Modifier.size(15.dp)
+            modifier = Modifier.size(10.dp)
         )
-        Spacer(modifier = Modifier.width(3.dp))
+        Spacer(modifier = Modifier.width(1.dp))
         Text(
             text = label,
-            fontSize = 11.sp,
+            fontSize = 8.5.sp,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
             fontWeight = FontWeight.Medium
         )
     }
 }
+

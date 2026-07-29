@@ -52,15 +52,17 @@ fun AgentDirectoryScreen() {
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.SupportAgent, contentDescription = null, tint = RealEstateGold)
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(Icons.Filled.SupportAgent, contentDescription = null, tint = RealEstateGold, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            "အကျိုးဆောင်များ လမ်းညွှန် (Agents Directory)",
+                            "အကျိုးဆောင်များ လမ်းညွှန် (Agents)",
                             fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
                             color = Color.White
                         )
                     }
                 },
+                modifier = Modifier.height(48.dp),
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = RealEstateNavy)
             )
         }

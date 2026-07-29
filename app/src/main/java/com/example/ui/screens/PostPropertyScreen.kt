@@ -76,17 +76,18 @@ fun PostPropertyScreen(
     var description by remember { mutableStateOf("") }
     var agentName by remember { mutableStateOf("") }
     var agentPhone by remember { mutableStateOf("") }
-    var selectedImagePath by remember { mutableStateOf<String?>(null) }
+    val selectedImagePaths = remember { mutableStateListOf<String>() }
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            val savedPath = saveImageToInternalStorage(context, it)
-            if (savedPath != null) {
-                selectedImagePath = savedPath
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            val remainingSlots = 3 - selectedImagePaths.size
+            if (remainingSlots > 0) {
+                val newPaths = uris.take(remainingSlots).mapNotNull { saveImageToInternalStorage(context, it) }
+                selectedImagePaths.addAll(newPaths)
             }
         }
     }
@@ -179,70 +180,113 @@ fun PostPropertyScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // PHOTO UPLOAD SECTION
-                    Text("ဓာတ်ပုံ တင်မည် (Photo Upload) *", fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    // PHOTO UPLOAD SECTION (MAX 3 PHOTOS)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("ဓာတ်ပုံ တင်မည် (Photo Upload) *", fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "${selectedImagePaths.size} / ၃ ပုံ",
+                            fontWeight = FontWeight.ExtraBold,
+                            color = RealEstateNavy,
+                            fontSize = 13.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "အိမ်ခြံမြေ ဓာတ်ပုံ အများဆုံး ၃ ပုံအထိ တင်နိုင်ပါသည်",
+                        fontSize = 11.sp,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    if (selectedImagePath != null) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color.LightGray)
-                        ) {
-                            PropertyImage(
-                                imageResName = selectedImagePath!!,
-                                contentDescription = "Selected Property Photo",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-
-                            // Remove photo icon
-                            Surface(
-                                color = Color.Black.copy(alpha = 0.6f),
-                                shape = CircleShape,
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .align(Alignment.TopEnd)
-                            ) {
-                                IconButton(onClick = { selectedImagePath = null }) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Close,
-                                        contentDescription = "Remove Photo",
-                                        tint = Color.White
-                                    )
-                                }
-                            }
-
-                            Surface(
-                                color = RealEstateNavy,
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .align(Alignment.BottomStart)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = RealEstateGold, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("ဓာတ်ပုံ ရွေးချယ်ပြီးပါပြီ", color = Color.White, fontSize = 12.sp)
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
+                    if (selectedImagePaths.isNotEmpty()) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            TextButton(onClick = { photoPickerLauncher.launch("image/*") }) {
-                                Icon(Icons.Filled.PhotoLibrary, contentDescription = null, tint = RealEstateNavy, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("ဓာတ်ပုံ ပြောင်းလဲမည် (Change Photo)", color = RealEstateNavy, fontSize = 12.sp)
+                            selectedImagePaths.forEachIndexed { index, path ->
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(110.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Color.LightGray)
+                                ) {
+                                    PropertyImage(
+                                        imageResName = path,
+                                        contentDescription = "Photo ${index + 1}",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+
+                                    // Badge
+                                    Surface(
+                                        color = RealEstateNavy.copy(alpha = 0.85f),
+                                        shape = RoundedCornerShape(bottomEnd = 8.dp),
+                                        modifier = Modifier.align(Alignment.TopStart)
+                                    ) {
+                                        Text(
+                                            text = if (index == 0) "အဓိကပုံ" else "ပုံ ${index + 1}",
+                                            color = RealEstateGold,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+
+                                    // Remove Photo Button
+                                    Surface(
+                                        color = Color.Black.copy(alpha = 0.65f),
+                                        shape = CircleShape,
+                                        modifier = Modifier
+                                            .padding(4.dp)
+                                            .size(24.dp)
+                                            .align(Alignment.TopEnd)
+                                    ) {
+                                        IconButton(onClick = { selectedImagePaths.removeAt(index) }) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Close,
+                                                contentDescription = "Remove",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Fill remaining empty slots if less than 3
+                            repeat(3 - selectedImagePaths.size) {
+                                Card(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(110.dp)
+                                        .clickable { photoPickerLauncher.launch("image/*") },
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize(),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.AddAPhoto,
+                                            contentDescription = "Add Photo",
+                                            tint = RealEstateNavy,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text("ပုံထပ်ထည့်ရန်", fontSize = 10.sp, color = RealEstateNavy, fontWeight = FontWeight.Bold)
+                                    }
+                                }
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(10.dp))
                     } else {
                         Card(
                             modifier = Modifier
@@ -265,35 +309,44 @@ fun PostPropertyScreen(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    "ဖုန်းထဲမှ ဓာတ်ပုံ တင်ရန် ဒီနေရာကို နှိပ်ပါ",
+                                    "ဖုန်းထဲမှ ဓာတ်ပုံများ တင်ရန် ဒီနေရာကို နှိပ်ပါ (အများဆုံး ၃ ပုံ)",
                                     fontWeight = FontWeight.Bold,
                                     color = RealEstateNavy,
-                                    fontSize = 14.sp
+                                    fontSize = 13.sp
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    "PNG, JPG သို့မဟုတ် JPEG ဓာတ်ပုံများ ရွေးချယ်နိုင်ပါသည်",
+                                    "PNG, JPG သို့မဟုတ် JPEG ဓာတ်ပုံ ၃ ပုံအထိ ရွေးချယ်နိုင်ပါသည်",
                                     color = Color.Gray,
                                     fontSize = 11.sp
                                 )
                             }
                         }
+                    }
 
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text("သို့မဟုတ် နမူနာ ဓာတ်ပုံများမှ ရွေးချယ်ပါ -", fontSize = 12.sp, color = Color.Gray)
+                    if (selectedImagePaths.size < 3) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("သို့မဟုတ် နမူနာ ဓာတ်ပုံများမှ ရွေးချယ်ပါ -", fontSize = 11.sp, color = Color.Gray)
                         Spacer(modifier = Modifier.height(6.dp))
                         val sampleImages = listOf(
                             "img_hero_banner" to "ကွန်ဒို",
-                            "img_property_villa" to "ဗီလာ/လုံးချင်း",
-                            "img_property_condo" to "ဇိမ်ခံတိုက်ခန်း",
+                            "img_property_villa" to "ဗီလာ",
+                            "img_property_condo" to "တိုက်ခန်း",
                             "img_property_apartment" to "အပါတ်မန့်"
                         )
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(sampleImages) { (resName, label) ->
+                                val isSelected = selectedImagePaths.contains(resName)
                                 FilterChip(
-                                    selected = selectedImagePath == resName,
-                                    onClick = { selectedImagePath = resName },
-                                    label = { Text(label, fontSize = 11.sp) },
+                                    selected = isSelected,
+                                    onClick = {
+                                        if (isSelected) {
+                                            selectedImagePaths.remove(resName)
+                                        } else if (selectedImagePaths.size < 3) {
+                                            selectedImagePaths.add(resName)
+                                        }
+                                    },
+                                    label = { Text(if (isSelected) "✓ $label" else "+ $label", fontSize = 11.sp) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = RealEstateNavy,
                                         selectedLabelColor = RealEstateGold
@@ -526,7 +579,7 @@ fun PostPropertyScreen(
                                 description.ifBlank { "အသေးစိတ် မေးမြန်းနိုင်ပါသည်။" },
                                 agentName,
                                 agentPhone,
-                                selectedImagePath
+                                if (selectedImagePaths.isNotEmpty()) selectedImagePaths.joinToString(",") else null
                             )
                         },
                         modifier = Modifier

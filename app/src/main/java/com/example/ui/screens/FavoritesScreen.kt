@@ -2,8 +2,9 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
@@ -33,15 +34,17 @@ fun FavoritesScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Bookmark, contentDescription = null, tint = RealEstateGold)
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(Icons.Filled.Bookmark, contentDescription = null, tint = RealEstateGold, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             "သိမ်းဆည်းထားသော အိမ်များ (${favoriteProperties.size})",
                             fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
                             color = Color.White
                         )
                     }
                 },
+                modifier = Modifier.height(48.dp),
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = RealEstateNavy)
             )
         }
@@ -80,9 +83,11 @@ fun FavoritesScreen(
                     )
                 }
             } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    contentPadding = PaddingValues(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(favoriteProperties, key = { it.id }) { property ->

@@ -7,6 +7,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,12 +28,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.model.Property
 import com.example.ui.components.FilterBottomSheet
 import com.example.ui.components.PropertyCard
+import com.example.ui.theme.AppThemeOption
 import com.example.ui.theme.RealEstateBlue
 import com.example.ui.theme.RealEstateGold
 import com.example.ui.theme.RealEstateGreen
@@ -56,9 +62,12 @@ fun HomeScreen(
     onPostNewClick: () -> Unit,
     onResetFilters: () -> Unit,
     isSyncing: Boolean = false,
-    onRefreshSync: () -> Unit = {}
+    onRefreshSync: () -> Unit = {},
+    selectedTheme: AppThemeOption = AppThemeOption.NAVY_GOLD,
+    onThemeSelected: (AppThemeOption) -> Unit = {}
 ) {
     var isFilterSheetOpen by remember { mutableStateOf(false) }
+    var isThemeDialogVisible by remember { mutableStateOf(false) }
 
     val cities = listOf(
         "ALL" to "မြို့အားလုံး",
@@ -93,12 +102,12 @@ fun HomeScreen(
             // Header with App Branding & Top Bar
             Surface(
                 color = RealEstateNavy,
-                shadowElevation = 4.dp
+                shadowElevation = 3.dp
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -109,44 +118,61 @@ fun HomeScreen(
                             Surface(
                                 shape = CircleShape,
                                 color = RealEstateGold,
-                                modifier = Modifier.size(36.dp)
+                                modifier = Modifier.size(28.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         imageVector = Icons.Filled.Home,
                                         contentDescription = null,
                                         tint = RealEstateNavy,
-                                        modifier = Modifier.size(22.dp)
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text(
                                     text = "Grace အိမ် ခြံ မြေ",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
                                     color = Color.White
                                 )
                                 Text(
-                                    text = "ဝယ် · ရောင်း · ငှား စုံလင်စွာ ရှာဖွေပါ",
-                                    fontSize = 11.sp,
+                                    text = "ဝယ် · ရောင်း · ငှား ရှာဖွေပါ",
+                                    fontSize = 10.sp,
                                     color = RealEstateGold
                                 )
                             }
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Theme Change Palette Button
+                            IconButton(
+                                onClick = { isThemeDialogVisible = true },
+                                modifier = Modifier
+                                    .background(Color.White.copy(alpha = 0.15f), CircleShape)
+                                    .size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Palette,
+                                    contentDescription = "Change Theme",
+                                    tint = RealEstateGold,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(6.dp))
+
                             // Sync Refresh Button
                             IconButton(
                                 onClick = onRefreshSync,
                                 modifier = Modifier
                                     .background(Color.White.copy(alpha = 0.15f), CircleShape)
-                                    .size(40.dp)
+                                    .size(32.dp)
                             ) {
                                 if (isSyncing) {
                                     CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
+                                        modifier = Modifier.size(16.dp),
                                         color = RealEstateGold,
                                         strokeWidth = 2.dp
                                     )
@@ -154,19 +180,20 @@ fun HomeScreen(
                                     Icon(
                                         imageVector = Icons.Filled.CloudSync,
                                         contentDescription = "Sync Cloud",
-                                        tint = RealEstateGold
+                                        tint = RealEstateGold,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
 
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
 
                             // Filter Button with active indicator
                             BadgedBox(
                                 badge = {
                                     if (selectedCity != "ALL" || selectedPropType != "ALL" || maxPriceLakhs < 20000f || minBedrooms > 0) {
                                         Badge(containerColor = RealEstateGold) {
-                                            Text("!", color = RealEstateNavy, fontWeight = FontWeight.Bold)
+                                            Text("!", color = RealEstateNavy, fontWeight = FontWeight.Bold, fontSize = 9.sp)
                                         }
                                     }
                                 }
@@ -175,35 +202,36 @@ fun HomeScreen(
                                     onClick = { isFilterSheetOpen = true },
                                     modifier = Modifier
                                         .background(Color.White.copy(alpha = 0.15f), CircleShape)
-                                        .size(40.dp)
+                                        .size(32.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.FilterList,
                                         contentDescription = "Filter",
-                                        tint = Color.White
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     // Search TextField
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = onSearchQueryChange,
-                        placeholder = { Text("မြို့နယ်၊ ခေါင်းစဉ် သို့မဟုတ် လိပ်စာ ရှာပါ...", fontSize = 13.sp, color = Color.Gray) },
-                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search", tint = RealEstateGold) },
+                        placeholder = { Text("မြို့နယ်၊ ခေါင်းစဉ် သို့မဟုတ် လိပ်စာ ရှာပါ...", fontSize = 12.sp, color = Color.Gray) },
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search", tint = RealEstateGold, modifier = Modifier.size(18.dp)) },
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { onSearchQueryChange("") }) {
-                                    Icon(Icons.Filled.Close, contentDescription = "Clear", tint = Color.White)
+                                IconButton(onClick = { onSearchQueryChange("") }, modifier = Modifier.size(24.dp)) {
+                                    Icon(Icons.Filled.Close, contentDescription = "Clear", tint = Color.White, modifier = Modifier.size(16.dp))
                                 }
                             }
                         },
                         singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(10.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color.White.copy(alpha = 0.12f),
                             unfocusedContainerColor = Color.White.copy(alpha = 0.1f),
@@ -212,10 +240,12 @@ fun HomeScreen(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White
                         ),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(42.dp)
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     // Listing Type Selector Tabs (အားလုံး | ဝယ်ရန် | ငှားရန်)
                     TabRow(
@@ -231,17 +261,20 @@ fun HomeScreen(
                         Tab(
                             selected = selectedTab == "ALL",
                             onClick = { onTabSelected("ALL") },
-                            text = { Text("အားလုံး (All)", fontWeight = FontWeight.Bold) }
+                            text = { Text("အားလုံး", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                            modifier = Modifier.height(34.dp)
                         )
                         Tab(
                             selected = selectedTab == "BUY",
                             onClick = { onTabSelected("BUY") },
-                            text = { Text("ဝယ်ရန်/ရောင်းရန်", fontWeight = FontWeight.Bold) }
+                            text = { Text("ဝယ်/ရောင်း", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                            modifier = Modifier.height(34.dp)
                         )
                         Tab(
                             selected = selectedTab == "RENT",
                             onClick = { onTabSelected("RENT") },
-                            text = { Text("ငှားရန် (Rent)", fontWeight = FontWeight.Bold) }
+                            text = { Text("ငှားရန်", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                            modifier = Modifier.height(34.dp)
                         )
                     }
                 }
@@ -255,43 +288,46 @@ fun HomeScreen(
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     items(cities) { (key, label) ->
                         val isSelected = selectedCity == key
                         FilterChip(
                             selected = isSelected,
                             onClick = { onCitySelected(key) },
-                            label = { Text(label, fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                            label = { Text(label, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
                             leadingIcon = if (key != "ALL") {
-                                { Icon(Icons.Filled.LocationOn, contentDescription = null, modifier = Modifier.size(14.dp)) }
+                                { Icon(Icons.Filled.LocationOn, contentDescription = null, modifier = Modifier.size(12.dp)) }
                             } else null,
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = RealEstateNavy,
                                 selectedLabelColor = RealEstateGold,
                                 selectedLeadingIconColor = RealEstateGold
-                            )
+                            ),
+                            modifier = Modifier.height(28.dp)
                         )
                     }
                 }
             }
 
-            // Main Content Area (Featured Banner & Property Feed)
-            LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+            // Main Content Area (Featured Banner & Property Feed in 4 Columns)
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                contentPadding = PaddingValues(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Top Hero Banner
-                item {
+                // Top Hero Banner (Spans all 4 columns)
+                item(span = { GridItemSpan(4) }) {
                     FeaturedHeroBanner(
                         onExploreClick = { onTabSelected("BUY") }
                     )
                 }
 
-                // Header title & count
-                item {
+                // Header title & count (Spans all 4 columns)
+                item(span = { GridItemSpan(4) }) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -313,7 +349,7 @@ fun HomeScreen(
 
                 // Empty state if no properties found
                 if (properties.isEmpty()) {
-                    item {
+                    item(span = { GridItemSpan(4) }) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -379,6 +415,121 @@ fun HomeScreen(
             onDismiss = { isFilterSheetOpen = false }
         )
     }
+
+    // Theme Switcher Dialog
+    if (isThemeDialogVisible) {
+        ThemeSelectionDialog(
+            currentTheme = selectedTheme,
+            onThemeSelect = { theme ->
+                onThemeSelected(theme)
+                isThemeDialogVisible = false
+            },
+            onDismiss = { isThemeDialogVisible = false }
+        )
+    }
+}
+
+@Composable
+private fun ThemeSelectionDialog(
+    currentTheme: AppThemeOption,
+    onThemeSelect: (AppThemeOption) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Filled.Palette,
+                contentDescription = "Theme",
+                tint = RealEstateGold,
+                modifier = Modifier.size(28.dp)
+            )
+        },
+        title = {
+            Text(
+                text = "Theme အရောင် ရွေးချယ်ပါ",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                AppThemeOption.entries.forEach { option ->
+                    val isSelected = option == currentTheme
+                    Surface(
+                        onClick = { onThemeSelect(option) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) option.headerColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = if (isSelected) 2.dp else 1.dp,
+                            color = if (isSelected) option.accentColor else Color.LightGray.copy(alpha = 0.5f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                                .fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // Color sample badge
+                                Box(
+                                    modifier = Modifier
+                                        .size(26.dp)
+                                        .clip(CircleShape)
+                                        .background(option.headerColor),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .clip(CircleShape)
+                                            .background(option.accentColor)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(10.dp))
+
+                                Column {
+                                    Text(
+                                        text = option.titleMm,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = option.titleEn,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    )
+                                }
+                            }
+
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Filled.CheckCircle,
+                                    contentDescription = "Selected",
+                                    tint = option.accentColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("ပိတ်မည် (Close)", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            }
+        }
+    )
 }
 
 @Composable
@@ -386,11 +537,11 @@ private fun FeaturedHeroBanner(
     onExploreClick: () -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(10.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .height(160.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+            .height(52.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Image(
@@ -406,51 +557,60 @@ private fun FeaturedHeroBanner(
                     .background(
                         Brush.horizontalGradient(
                             colors = listOf(
-                                RealEstateNavy.copy(alpha = 0.92f),
-                                RealEstateNavy.copy(alpha = 0.5f),
-                                Color.Transparent
+                                RealEstateNavy.copy(alpha = 0.95f),
+                                RealEstateNavy.copy(alpha = 0.75f),
+                                RealEstateNavy.copy(alpha = 0.4f)
                             )
                         )
                     )
             )
 
-            Column(
+            Row(
                 modifier = Modifier
-                    .fillMaxHeight()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.Center
+                    .fillMaxSize()
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = RealEstateGold,
-                    modifier = Modifier.padding(bottom = 6.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
                 ) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = RealEstateGold
+                    ) {
+                        Text(
+                            text = "အထူးအစီအစဉ်",
+                            color = RealEstateNavy,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
                     Text(
-                        text = "အထူး အစီအစဉ်",
-                        color = RealEstateNavy,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        text = "စိတ်ကြိုက် အိမ်ခြံမြေများကို တိုက်ရိုက် ဆက်သွယ်ပါ",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                Text(
-                    text = "စိတ်ကြိုက် အိမ်ခြံမြေများကို\nတိုက်ရိုက် ဆက်သွယ်ပါ",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    lineHeight = 22.sp
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
                 Button(
                     onClick = onExploreClick,
                     colors = ButtonDefaults.buttonColors(containerColor = RealEstateGold),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(10.dp)
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.height(30.dp)
                 ) {
-                    Text("ကြည့်ရှုမည်", color = RealEstateNavy, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("ကြည့်ရှုမည်", color = RealEstateNavy, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

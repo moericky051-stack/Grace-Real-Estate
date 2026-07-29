@@ -61,6 +61,15 @@ fun PropertyDetailScreen(
 
     var showContactDialog by remember { mutableStateOf(false) }
 
+    val imageList = remember(property.imageResName) {
+        if (property.imageResName.contains(",")) {
+            property.imageResName.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        } else {
+            listOf(property.imageResName)
+        }
+    }
+    var currentImageIndex by remember { mutableStateOf(0) }
+
     Scaffold(
         bottomBar = {
             // Bottom Action Bar with Call & Chat Buttons
@@ -130,8 +139,9 @@ fun PropertyDetailScreen(
                     .fillMaxWidth()
                     .height(260.dp)
             ) {
+                val activeImg = imageList.getOrNull(currentImageIndex) ?: property.imageResName
                 PropertyImage(
-                    imageResName = property.imageResName,
+                    imageResName = activeImg,
                     contentDescription = property.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -146,7 +156,7 @@ fun PropertyDetailScreen(
                                 colors = listOf(
                                     Color.Black.copy(alpha = 0.5f),
                                     Color.Transparent,
-                                    Color.Black.copy(alpha = 0.4f)
+                                    Color.Black.copy(alpha = 0.5f)
                                 )
                             )
                         )
@@ -197,6 +207,57 @@ fun PropertyDetailScreen(
                                 contentDescription = "Favorite",
                                 tint = if (property.isFavorite) Color.Red else Color.Gray
                             )
+                        }
+                    }
+                }
+
+                // Photo Counter Badge and Dots/Thumbnails if multiple photos exist
+                if (imageList.size > 1) {
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.65f),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .align(Alignment.TopEnd)
+                            .offset(y = 52.dp)
+                    ) {
+                        Text(
+                            text = "ဓာတ်ပုံ ${currentImageIndex + 1}/${imageList.size}",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+
+                    // Navigation Chevrons
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp)
+                            .align(Alignment.Center),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        IconButton(
+                            onClick = {
+                                currentImageIndex = if (currentImageIndex > 0) currentImageIndex - 1 else imageList.size - 1
+                            },
+                            modifier = Modifier
+                                .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                                .size(36.dp)
+                        ) {
+                            Icon(Icons.Filled.ChevronLeft, contentDescription = "Prev Photo", tint = Color.White)
+                        }
+
+                        IconButton(
+                            onClick = {
+                                currentImageIndex = (currentImageIndex + 1) % imageList.size
+                            },
+                            modifier = Modifier
+                                .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                                .size(36.dp)
+                        ) {
+                            Icon(Icons.Filled.ChevronRight, contentDescription = "Next Photo", tint = Color.White)
                         }
                     }
                 }

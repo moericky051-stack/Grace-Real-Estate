@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.db.AppDatabase
 import com.example.data.model.Property
 import com.example.data.repository.PropertyRepository
+import com.example.ui.theme.AppThemeOption
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +26,11 @@ class RealEstateViewModel(application: Application) : AndroidViewModel(applicati
     val minBedrooms = MutableStateFlow(0) // 0 = Any
     val isFilterSheetOpen = MutableStateFlow(false)
     val isSyncing = MutableStateFlow(false)
+    val selectedTheme = MutableStateFlow(AppThemeOption.NAVY_GOLD)
+
+    fun setTheme(theme: AppThemeOption) {
+        selectedTheme.value = theme
+    }
 
     init {
         val db = AppDatabase.getInstance(application)

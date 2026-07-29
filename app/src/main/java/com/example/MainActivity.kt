@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -41,8 +42,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
-                RealEstateApp()
+            val viewModel: RealEstateViewModel = viewModel()
+            val currentTheme by viewModel.selectedTheme.collectAsStateWithLifecycle()
+            
+            MyApplicationTheme(themeOption = currentTheme) {
+                RealEstateApp(viewModel = viewModel)
             }
         }
     }
@@ -66,6 +70,7 @@ fun RealEstateApp(
     val maxPriceLakhs by viewModel.maxPriceLakhs.collectAsStateWithLifecycle()
     val minBedrooms by viewModel.minBedrooms.collectAsStateWithLifecycle()
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
+    val currentTheme by viewModel.selectedTheme.collectAsStateWithLifecycle()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -88,53 +93,67 @@ fun RealEstateApp(
                 enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                 exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
             ) {
-                NavigationBar(
-                    containerColor = RealEstateNavy,
-                    contentColor = RealEstateGold,
-                    tonalElevation = 8.dp
+                Surface(
+                    color = currentTheme.headerColor,
+                    shadowElevation = 16.dp,
+                    border = BorderStroke(1.dp, RealEstateGold.copy(alpha = 0.5f))
                 ) {
-                    bottomNavItems.forEach { item ->
-                        val isSelected = currentRoute == item.route
-                        NavigationBarItem(
-                            selected = isSelected,
-                            onClick = {
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
+                    NavigationBar(
+                        containerColor = currentTheme.headerColor,
+                        contentColor = RealEstateGold,
+                        tonalElevation = 0.dp,
+                        modifier = Modifier.height(60.dp),
+                        windowInsets = WindowInsets(0, 0, 0, 0)
+                    ) {
+                        bottomNavItems.forEach { item ->
+                            val isSelected = currentRoute == item.route
+                            NavigationBarItem(
+                                selected = isSelected,
+                                alwaysShowLabel = true,
+                                onClick = {
+                                    navController.navigate(item.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = {
-                                BadgedBox(
-                                    badge = {
-                                        if (item.badgeCount > 0) {
-                                            Badge(containerColor = RealEstateGold) {
-                                                Text("${item.badgeCount}", color = RealEstateNavy, fontWeight = FontWeight.Bold)
+                                },
+                                icon = {
+                                    BadgedBox(
+                                        badge = {
+                                            if (item.badgeCount > 0) {
+                                                Badge(containerColor = RealEstateGold) {
+                                                    Text("${item.badgeCount}", color = currentTheme.headerColor, fontWeight = FontWeight.ExtraBold, fontSize = 9.sp)
+                                                }
                                             }
                                         }
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                                            contentDescription = item.label,
+                                            tint = if (isSelected) RealEstateGold else Color.White.copy(alpha = 0.85f),
+                                            modifier = Modifier.size(22.dp)
+                                        )
                                     }
-                                ) {
-                                    Icon(
-                                        imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                                        contentDescription = item.label,
-                                        tint = if (isSelected) RealEstateGold else Color.White.copy(alpha = 0.7f)
+                                },
+                                label = {
+                                    Text(
+                                        text = item.label,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) RealEstateGold else Color.White.copy(alpha = 0.85f)
                                     )
-                                }
-                            },
-                            label = {
-                                Text(
-                                    text = item.label,
-                                    fontSize = 10.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) RealEstateGold else Color.White.copy(alpha = 0.7f)
+                                },
+                                colors = NavigationBarItemDefaults.colors(
+                                    indicatorColor = RealEstateGold.copy(alpha = 0.25f),
+                                    selectedIconColor = RealEstateGold,
+                                    unselectedIconColor = Color.White.copy(alpha = 0.85f),
+                                    selectedTextColor = RealEstateGold,
+                                    unselectedTextColor = Color.White.copy(alpha = 0.85f)
                                 )
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = Color.White.copy(alpha = 0.15f)
                             )
-                        )
+                        }
                     }
                 }
             }
@@ -183,7 +202,9 @@ fun RealEstateApp(
                                 snackbarHostState.showSnackbar(msg)
                             }
                         }
-                    }
+                    },
+                    selectedTheme = currentTheme,
+                    onThemeSelected = { viewModel.setTheme(it) }
                 )
             }
 

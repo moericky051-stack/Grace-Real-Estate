@@ -38,11 +38,35 @@ private val LightColorScheme =
 
 @Composable
 fun MyApplicationTheme(
+  themeOption: AppThemeOption = AppThemeOption.NAVY_GOLD,
   darkTheme: Boolean = isSystemInDarkTheme(),
-  dynamicColor: Boolean = false,
   content: @Composable () -> Unit,
 ) {
-  val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+  val colorScheme = if (themeOption.isDark) {
+    darkColorScheme(
+      primary = themeOption.primaryColor,
+      onPrimary = Color.White,
+      secondary = themeOption.accentColor,
+      onSecondary = Color.Black,
+      tertiary = RealEstateGreen,
+      background = themeOption.headerColor,
+      surface = Color(0xFF1E293B),
+      onBackground = Color.White,
+      onSurface = Color.White
+    )
+  } else {
+    lightColorScheme(
+      primary = themeOption.primaryColor,
+      onPrimary = Color.White,
+      secondary = themeOption.accentColor,
+      onSecondary = Color.Black,
+      tertiary = RealEstateGreen,
+      background = RealEstateBg,
+      surface = Color.White,
+      onBackground = Color(0xFF0F172A),
+      onSurface = Color(0xFF0F172A)
+    )
+  }
 
   MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
 }
