@@ -1,4 +1,4 @@
-name: Android CI/CD Pipeline
+Name: Android CI/CD Pipeline
 
 on:
   push:
@@ -20,13 +20,16 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
+
+      # Gradle Setup action ကို ထည့်ပေးထားပါသည် (Corrupt ဖြစ်နေသော Wrapper/Cache များကို လိုအပ်သလို အလိုအလျောက် ပြင်ပေးပြီး Cache လုပ်ပေးပါသည်)
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Grant execute permission
         run: chmod +x ./gradlew
 
       - name: Build Debug APK
-        run: ./gradlew clean assembleDebug --stacktrace
+        run: ./gradlew clean assembleDebug --stacktrace --no-daemon
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
