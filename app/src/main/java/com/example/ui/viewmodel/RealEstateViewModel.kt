@@ -173,6 +173,26 @@ class RealEstateViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    fun updateProperty(
+        property: Property,
+        onSuccess: () -> Unit
+    ) {
+        viewModelScope.launch {
+            repository.insertProperty(property)
+            onSuccess()
+        }
+    }
+
+    fun deleteProperty(
+        propertyId: Long,
+        onSuccess: () -> Unit
+    ) {
+        viewModelScope.launch {
+            repository.deleteProperty(propertyId)
+            onSuccess()
+        }
+    }
+
     fun resetFilters() {
         searchQuery.value = ""
         selectedListingTypeTab.value = "ALL"

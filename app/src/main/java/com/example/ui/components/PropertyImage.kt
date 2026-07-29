@@ -17,14 +17,22 @@ fun PropertyImage(
     contentScale: ContentScale = ContentScale.Crop
 ) {
     val context = LocalContext.current
-    val imageModel: Any = remember(imageResName) {
+    val primaryPath = remember(imageResName) {
+        if (imageResName.contains(",")) {
+            imageResName.split(",").firstOrNull { it.isNotBlank() }?.trim() ?: imageResName
+        } else {
+            imageResName
+        }
+    }
+
+    val imageModel: Any = remember(primaryPath) {
         when {
-            imageResName.startsWith("/") -> java.io.File(imageResName)
-            imageResName.startsWith("file://") ||
-            imageResName.startsWith("content://") ||
-            imageResName.startsWith("http") -> imageResName
+            primaryPath.startsWith("/") -> java.io.File(primaryPath)
+            primaryPath.startsWith("file://") ||
+            primaryPath.startsWith("content://") ||
+            primaryPath.startsWith("http") -> primaryPath
             else -> {
-                val resId = context.resources.getIdentifier(imageResName, "drawable", context.packageName)
+                val resId = context.resources.getIdentifier(primaryPath, "drawable", context.packageName)
                 if (resId != 0) resId else R.drawable.img_hero_banner
             }
         }

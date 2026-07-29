@@ -215,38 +215,6 @@ fun HomeScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    // Search TextField
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = onSearchQueryChange,
-                        placeholder = { Text("မြို့နယ်၊ ခေါင်းစဉ် သို့မဟုတ် လိပ်စာ ရှာပါ...", fontSize = 12.sp, color = Color.Gray) },
-                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search", tint = RealEstateGold, modifier = Modifier.size(18.dp)) },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { onSearchQueryChange("") }, modifier = Modifier.size(24.dp)) {
-                                    Icon(Icons.Filled.Close, contentDescription = "Clear", tint = Color.White, modifier = Modifier.size(16.dp))
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White.copy(alpha = 0.12f),
-                            unfocusedContainerColor = Color.White.copy(alpha = 0.1f),
-                            focusedBorderColor = RealEstateGold,
-                            unfocusedBorderColor = Color.Transparent,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(42.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
                     // Listing Type Selector Tabs (အားလုံး | ဝယ်ရန် | ငှားရန်)
                     TabRow(
                         selectedTabIndex = when (selectedTab) {
@@ -311,23 +279,16 @@ fun HomeScreen(
                 }
             }
 
-            // Main Content Area (Featured Banner & Property Feed in 4 Columns)
+            // Main Content Area (Property Feed in 2 Columns)
             LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
+                columns = GridCells.Fixed(2),
                 contentPadding = PaddingValues(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Top Hero Banner (Spans all 4 columns)
-                item(span = { GridItemSpan(4) }) {
-                    FeaturedHeroBanner(
-                        onExploreClick = { onTabSelected("BUY") }
-                    )
-                }
-
-                // Header title & count (Spans all 4 columns)
-                item(span = { GridItemSpan(4) }) {
+                // Header title & count (Spans both 2 columns)
+                item(span = { GridItemSpan(2) }) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -349,7 +310,7 @@ fun HomeScreen(
 
                 // Empty state if no properties found
                 if (properties.isEmpty()) {
-                    item(span = { GridItemSpan(4) }) {
+                    item(span = { GridItemSpan(2) }) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()

@@ -226,6 +226,15 @@ fun RealEstateApp(
                     },
                     onCalculateLoanClick = { priceLakhs ->
                         navController.navigate("calculator?price=$priceLakhs")
+                    },
+                    onEditClick = { prop ->
+                        navController.navigate("edit/${prop.id}")
+                    },
+                    onDeleteClick = { id ->
+                        viewModel.deleteProperty(id) {
+                            scope.launch { snackbarHostState.showSnackbar("ကြော်ငြာ ဖျက်လိုက်ပါပြီ။") }
+                            navController.popBackStack()
+                        }
                     }
                 )
             }
@@ -244,6 +253,29 @@ fun RealEstateApp(
                             navController.popBackStack()
                         }
                     }
+                )
+            }
+
+            // 3b. Edit Listing Screen
+            composable(
+                route = "edit/{propertyId}",
+                arguments = listOf(navArgument("propertyId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val propId = backStackEntry.arguments?.getLong("propertyId") ?: 0L
+                val property by viewModel.getPropertyById(propId).collectAsStateWithLifecycle()
+
+                PostPropertyScreen(
+                    onBackClick = { navController.popBackStack() },
+                    existingProperty = property,
+                    onUpdateProperty = { updated ->
+                        viewModel.updateProperty(updated) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("ကြော်ငြာ ပြင်ဆင်ပြီးပါပြီ။")
+                            }
+                            navController.popBackStack()
+                        }
+                    },
+                    onSubmitProperty = { _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> }
                 )
             }
 

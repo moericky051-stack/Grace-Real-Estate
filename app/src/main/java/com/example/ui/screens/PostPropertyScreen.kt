@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.Property
 import com.example.ui.components.PropertyImage
 import com.example.ui.theme.RealEstateGold
 import com.example.ui.theme.RealEstateNavy
@@ -37,6 +38,8 @@ import java.io.File
 @Composable
 fun PostPropertyScreen(
     onBackClick: () -> Unit,
+    existingProperty: Property? = null,
+    onUpdateProperty: ((Property) -> Unit)? = null,
     onSubmitProperty: (
         title: String,
         listingType: String,
@@ -60,23 +63,55 @@ fun PostPropertyScreen(
 ) {
     val context = LocalContext.current
 
-    var title by remember { mutableStateOf("") }
-    var listingType by remember { mutableStateOf("BUY") } // BUY or RENT
-    var propertyType by remember { mutableStateOf("Condo") }
-    var priceLakhsText by remember { mutableStateOf("") }
-    var city by remember { mutableStateOf("Yangon") }
-    var township by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
-    var areaSqftText by remember { mutableStateOf("") }
-    var bedrooms by remember { mutableStateOf("2") }
-    var bathrooms by remember { mutableStateOf("1") }
-    var floorLevel by remember { mutableStateOf("3rd Floor") }
-    var furnishing by remember { mutableStateOf("Fully Furnished") }
-    var deedType by remember { mutableStateOf("Grant Land (ဂရန်မြေ)") }
-    var description by remember { mutableStateOf("") }
-    var agentName by remember { mutableStateOf("") }
-    var agentPhone by remember { mutableStateOf("") }
-    val selectedImagePaths = remember { mutableStateListOf<String>() }
+    var title by remember { mutableStateOf(existingProperty?.title ?: "") }
+    var listingType by remember { mutableStateOf(existingProperty?.listingType ?: "BUY") } // BUY or RENT
+    var propertyType by remember { mutableStateOf(existingProperty?.propertyType ?: "Condo") }
+    var priceLakhsText by remember { mutableStateOf(existingProperty?.priceLakhs?.let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() } ?: "") }
+    var city by remember { mutableStateOf(existingProperty?.city ?: "Yangon") }
+    var township by remember { mutableStateOf(existingProperty?.township ?: "") }
+    var address by remember { mutableStateOf(existingProperty?.address ?: "") }
+    var areaSqftText by remember { mutableStateOf(existingProperty?.areaSqft?.toString() ?: "") }
+    var bedrooms by remember { mutableStateOf(existingProperty?.bedrooms?.toString() ?: "2") }
+    var bathrooms by remember { mutableStateOf(existingProperty?.bathrooms?.toString() ?: "1") }
+    var floorLevel by remember { mutableStateOf(existingProperty?.floorLevel ?: "3rd Floor") }
+    var furnishing by remember { mutableStateOf(existingProperty?.furnishing ?: "Fully Furnished") }
+    var deedType by remember { mutableStateOf(existingProperty?.deedType ?: "Grant Land (ဂရန်မြေ)") }
+    var description by remember { mutableStateOf(existingProperty?.description ?: "") }
+    var agentName by remember { mutableStateOf(existingProperty?.agentName ?: "") }
+    var agentPhone by remember { mutableStateOf(existingProperty?.agentPhone ?: "") }
+    
+    val selectedImagePaths = remember {
+        mutableStateListOf<String>().apply {
+            existingProperty?.imageResName?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.let {
+                addAll(it)
+            }
+        }
+    }
+
+    LaunchedEffect(existingProperty) {
+        existingProperty?.let { p ->
+            title = p.title
+            listingType = p.listingType
+            propertyType = p.propertyType
+            priceLakhsText = if (p.priceLakhs % 1.0 == 0.0) p.priceLakhs.toInt().toString() else p.priceLakhs.toString()
+            city = p.city
+            township = p.township
+            address = p.address
+            areaSqftText = p.areaSqft.toString()
+            bedrooms = p.bedrooms.toString()
+            bathrooms = p.bathrooms.toString()
+            floorLevel = p.floorLevel
+            furnishing = p.furnishing
+            deedType = p.deedType
+            description = p.description
+            agentName = p.agentName
+            agentPhone = p.agentPhone
+            selectedImagePaths.clear()
+            p.imageResName.split(",").map { it.trim() }.filter { it.isNotEmpty() }.let {
+                selectedImagePaths.addAll(it)
+            }
+        }
+    }
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -100,7 +135,7 @@ fun PostPropertyScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "အိမ်ခြံမြေ တင်မည် (Post Listing)",
+                        if (existingProperty != null) "ကြော်ငြာ ပြင်ဆင်ရန် (Edit Listing)" else "အိမ်ခြံမြေ တင်မည် (Post Listing)",
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
@@ -561,26 +596,52 @@ fun PostPropertyScreen(
                             }
 
                             errorMessage = null
-                            onSubmitProperty(
-                                title,
-                                listingType,
-                                propertyType,
-                                priceVal,
-                                if (listingType == "RENT") "PER_MONTH" else "TOTAL",
-                                city,
-                                township,
-                                address,
-                                areaSqftText.toIntOrNull() ?: 1000,
-                                bedrooms.toIntOrNull() ?: 2,
-                                bathrooms.toIntOrNull() ?: 1,
-                                floorLevel,
-                                furnishing,
-                                deedType,
-                                description.ifBlank { "အသေးစိတ် မေးမြန်းနိုင်ပါသည်။" },
-                                agentName,
-                                agentPhone,
-                                if (selectedImagePaths.isNotEmpty()) selectedImagePaths.joinToString(",") else null
-                            )
+                            val finalImgString = if (selectedImagePaths.isNotEmpty()) selectedImagePaths.joinToString(",") else "img_hero_banner"
+
+                            if (existingProperty != null && onUpdateProperty != null) {
+                                val updated = existingProperty.copy(
+                                    title = title.ifBlank { "အိမ်ခြံမြေ ရောင်းရန်/ငှားရန်" },
+                                    listingType = listingType,
+                                    propertyType = propertyType,
+                                    priceLakhs = priceVal,
+                                    pricePeriod = if (listingType == "RENT") "PER_MONTH" else "TOTAL",
+                                    city = city,
+                                    township = township,
+                                    address = address,
+                                    areaSqft = areaSqftText.toIntOrNull() ?: 1000,
+                                    bedrooms = bedrooms.toIntOrNull() ?: 2,
+                                    bathrooms = bathrooms.toIntOrNull() ?: 1,
+                                    floorLevel = floorLevel,
+                                    furnishing = furnishing,
+                                    deedType = deedType,
+                                    description = description.ifBlank { "အသေးစိတ် မေးမြန်းနိုင်ပါသည်။" },
+                                    agentName = agentName.ifBlank { "အိမ်ပိုင်ရှင်" },
+                                    agentPhone = agentPhone.ifBlank { "0912345678" },
+                                    imageResName = finalImgString
+                                )
+                                onUpdateProperty(updated)
+                            } else {
+                                onSubmitProperty(
+                                    title,
+                                    listingType,
+                                    propertyType,
+                                    priceVal,
+                                    if (listingType == "RENT") "PER_MONTH" else "TOTAL",
+                                    city,
+                                    township,
+                                    address,
+                                    areaSqftText.toIntOrNull() ?: 1000,
+                                    bedrooms.toIntOrNull() ?: 2,
+                                    bathrooms.toIntOrNull() ?: 1,
+                                    floorLevel,
+                                    furnishing,
+                                    deedType,
+                                    description.ifBlank { "အသေးစိတ် မေးမြန်းနိုင်ပါသည်။" },
+                                    agentName,
+                                    agentPhone,
+                                    finalImgString
+                                )
+                            }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -588,10 +649,14 @@ fun PostPropertyScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = RealEstateNavy),
                         shape = RoundedCornerShape(14.dp)
                     ) {
-                        Icon(Icons.Filled.Publish, contentDescription = "Publish", tint = RealEstateGold)
+                        Icon(
+                            imageVector = if (existingProperty != null) Icons.Filled.Save else Icons.Filled.Publish,
+                            contentDescription = "Submit",
+                            tint = RealEstateGold
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "ကြော်ငြာ အသစ် တင်မည် (Publish)",
+                            if (existingProperty != null) "ပြင်ဆင်မှု သိမ်းဆည်းမည် (Update)" else "ကြော်ငြာ အသစ် တင်မည် (Publish)",
                             color = RealEstateGold,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold

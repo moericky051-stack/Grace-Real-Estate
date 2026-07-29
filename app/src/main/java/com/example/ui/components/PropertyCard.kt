@@ -39,7 +39,7 @@ fun PropertyCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(12.dp))
             .clickable { onCardClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -49,7 +49,7 @@ fun PropertyCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(105.dp)
+                    .height(125.dp)
             ) {
                 PropertyImage(
                     imageResName = property.imageResName,
@@ -74,15 +74,15 @@ fun PropertyCard(
                     shape = RoundedCornerShape(8.dp),
                     color = if (isRent) RealEstateBlue else RealEstateGreen,
                     modifier = Modifier
-                        .padding(4.dp)
+                        .padding(6.dp)
                         .align(Alignment.TopStart)
                 ) {
                     Text(
-                        text = if (isRent) "ငှား" else "ဝယ်",
+                        text = if (isRent) "ငှားရန်" else "ဝယ်ရန်",
                         color = Color.White,
-                        fontSize = 9.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
 
@@ -90,44 +90,44 @@ fun PropertyCard(
                 IconButton(
                     onClick = onFavoriteClick,
                     modifier = Modifier
-                        .padding(4.dp)
+                        .padding(6.dp)
                         .align(Alignment.TopEnd)
-                        .size(24.dp)
-                        .background(Color.White.copy(alpha = 0.9f), CircleShape)
+                        .size(28.dp)
+                        .background(Color.White.copy(alpha = 0.92f), CircleShape)
                 ) {
                     Icon(
                         imageVector = if (property.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = "Favorite",
                         tint = if (property.isFavorite) Color.Red else Color.Gray,
-                        modifier = Modifier.size(13.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                 }
 
                 // Price Tag overlay at bottom left of image
                 Surface(
                     shape = RoundedCornerShape(topEnd = 8.dp),
-                    color = RealEstateNavy.copy(alpha = 0.9f),
+                    color = RealEstateNavy.copy(alpha = 0.92f),
                     modifier = Modifier.align(Alignment.BottomStart)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = if (property.priceLakhs >= 1000) {
-                                String.format("%.1f", property.priceLakhs / 1000.0) + "သောင်း"
+                                String.format("%.1f", property.priceLakhs / 1000.0) + " သောင်း"
                             } else {
-                                "${property.priceLakhs.toInt()}သိန်း"
+                                "${property.priceLakhs.toInt()} သိန်း"
                             },
                             color = RealEstateGold,
-                            fontSize = 11.sp,
+                            fontSize = 12.5.sp,
                             fontWeight = FontWeight.ExtraBold
                         )
                         if (isRent) {
                             Text(
-                                text = "/လ",
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 8.sp
+                                text = " / လ",
+                                color = Color.White.copy(alpha = 0.85f),
+                                fontSize = 9.sp
                             )
                         }
                     }
@@ -138,18 +138,19 @@ fun PropertyCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(5.dp)
+                    .padding(8.dp)
             ) {
                 Text(
                     text = property.title,
-                    fontSize = 10.5.sp,
+                    fontSize = 11.5.sp,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1,
+                    maxLines = 2,
+                    lineHeight = 15.sp,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 // Location row
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -157,19 +158,19 @@ fun PropertyCard(
                         imageVector = Icons.Filled.LocationOn,
                         contentDescription = "Location",
                         tint = RealEstateGold,
-                        modifier = Modifier.size(11.dp)
+                        modifier = Modifier.size(12.dp)
                     )
-                    Spacer(modifier = Modifier.width(2.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
                     Text(
                         text = "${property.township}, ${property.city}",
-                        fontSize = 9.sp,
+                        fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 // Property Specs Row (Area, Beds, Baths)
                 Row(
@@ -179,18 +180,18 @@ fun PropertyCard(
                 ) {
                     SpecChip(
                         icon = Icons.Filled.SquareFoot,
-                        label = "${property.areaSqft}"
+                        label = "${property.areaSqft} sqft"
                     )
                     if (property.bedrooms > 0) {
                         SpecChip(
                             icon = Icons.Filled.Bed,
-                            label = "${property.bedrooms}ခန်း"
+                            label = "${property.bedrooms} ခန်း"
                         )
                     }
                     if (property.bathrooms > 0) {
                         SpecChip(
                             icon = Icons.Filled.Bathtub,
-                            label = "${property.bathrooms}"
+                            label = "${property.bathrooms} ရေ"
                         )
                     }
                 }
@@ -208,13 +209,13 @@ private fun SpecChip(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-            modifier = Modifier.size(10.dp)
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
+            modifier = Modifier.size(11.dp)
         )
-        Spacer(modifier = Modifier.width(1.dp))
+        Spacer(modifier = Modifier.width(2.dp))
         Text(
             text = label,
-            fontSize = 8.5.sp,
+            fontSize = 9.5.sp,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
             fontWeight = FontWeight.Medium
         )

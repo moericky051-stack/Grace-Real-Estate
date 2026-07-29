@@ -42,7 +42,9 @@ fun PropertyDetailScreen(
     property: Property?,
     onBackClick: () -> Unit,
     onFavoriteToggle: (Property) -> Unit,
-    onCalculateLoanClick: (Double) -> Unit
+    onCalculateLoanClick: (Double) -> Unit,
+    onEditClick: ((Property) -> Unit)? = null,
+    onDeleteClick: ((Long) -> Unit)? = null
 ) {
     if (property == null) {
         Box(
@@ -60,6 +62,7 @@ fun PropertyDetailScreen(
     ).let { id -> if (id != 0) id else R.drawable.img_hero_banner }
 
     var showContactDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
     val imageList = remember(property.imageResName) {
         if (property.imageResName.contains(",")) {
@@ -74,25 +77,27 @@ fun PropertyDetailScreen(
         bottomBar = {
             // Bottom Action Bar with Call & Chat Buttons
             Surface(
-                shadowElevation = 8.dp,
-                color = MaterialTheme.colorScheme.surface
+                shadowElevation = 12.dp,
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .navigationBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(text = "စျေးနှုန်း", fontSize = 11.sp, color = Color.Gray)
                         Text(
                             text = if (property.priceLakhs >= 1000) {
-                                String.format("%.1f", property.priceLakhs / 1000.0) + " သောင်းကျပ်"
+                                String.format("%.1f", property.priceLakhs / 1000.0) + " သောင်း"
                             } else {
-                                "${property.priceLakhs.toInt()} သိန်းကျပ်"
+                                "${property.priceLakhs.toInt()} သိန်း"
                             },
-                            fontSize = 18.sp,
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = RealEstateNavy
                         )
@@ -107,21 +112,23 @@ fun PropertyDetailScreen(
                             context.startActivity(intent)
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = RealEstateNavy),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
                     ) {
-                        Icon(Icons.Filled.Phone, contentDescription = "Call", tint = RealEstateGold)
+                        Icon(Icons.Filled.Phone, contentDescription = "Call", tint = RealEstateGold, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("ဖုန်းခေါ်မည်", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("ဖုန်းခေါ်မည်", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
 
-                    // SMS / Viber Chat Button
+                    // SMS / Chat Button
                     OutlinedButton(
                         onClick = { showContactDialog = true },
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
                     ) {
-                        Icon(Icons.Filled.Chat, contentDescription = "Message", tint = RealEstateBlue)
+                        Icon(Icons.Filled.Chat, contentDescription = "Message", tint = RealEstateBlue, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("မေးမြန်းမည်", color = RealEstateBlue, fontWeight = FontWeight.Bold)
+                        Text("မေးမြန်းမည်", color = RealEstateBlue, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 }
             }
@@ -180,6 +187,28 @@ fun PropertyDetailScreen(
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (onEditClick != null) {
+                            IconButton(
+                                onClick = { onEditClick(property) },
+                                modifier = Modifier
+                                    .background(RealEstateNavy.copy(alpha = 0.85f), CircleShape)
+                                    .size(40.dp)
+                            ) {
+                                Icon(Icons.Filled.Edit, contentDescription = "Edit Listing", tint = RealEstateGold)
+                            }
+                        }
+
+                        if (onDeleteClick != null) {
+                            IconButton(
+                                onClick = { showDeleteConfirmDialog = true },
+                                modifier = Modifier
+                                    .background(Color.Red.copy(alpha = 0.85f), CircleShape)
+                                    .size(40.dp)
+                            ) {
+                                Icon(Icons.Filled.Delete, contentDescription = "Delete Listing", tint = Color.White)
+                            }
+                        }
+
                         IconButton(
                             onClick = {
                                 val sendIntent = Intent().apply {
@@ -480,9 +509,92 @@ fun PropertyDetailScreen(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Manage Listing Card (Edit / Delete)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Settings, contentDescription = null, tint = RealEstateNavy, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "ကြော်ငြာ စီမံခန့်ခွဲရန် (Manage Listing)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = RealEstateNavy
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Button(
+                                onClick = { onEditClick?.invoke(property) },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = RealEstateNavy),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Filled.Edit, contentDescription = "Edit", tint = RealEstateGold, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("ပြင်ဆင်မည်", color = RealEstateGold, fontWeight = FontWeight.Bold)
+                            }
+
+                            Button(
+                                onClick = { showDeleteConfirmDialog = true },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("ဖျက်မည်", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
+    }
+
+    // Delete Confirmation Dialog
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            icon = {
+                Icon(Icons.Filled.Warning, contentDescription = null, tint = Color(0xFFD32F2F), modifier = Modifier.size(32.dp))
+            },
+            title = {
+                Text("ကြော်ငြာ ဖျက်ရန် သေချာပါသလား။", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text("ဒီအိမ်ခြံမြေ ကြော်ငြာ (${property.title}) ကို ဖျက်ပစ်ပါက ပြန်လည်ရယူ၍ ရတော့မည် မဟုတ်ပါ။")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDeleteClick?.invoke(property.id)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
+                ) {
+                    Text("သေချာသည်၊ ဖျက်မည်", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeleteConfirmDialog = false }) {
+                    Text("မဖျက်တော့ပါ")
+                }
+            }
+        )
     }
 
     // Contact Dialog
