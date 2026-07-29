@@ -4,7 +4,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
 
-    // alias(libs.plugins.google.devtools.ksp)
+    // KSP Plugin ကို ပြန်ဖွင့်ပေးထားပါတယ်
+    alias(libs.plugins.google.devtools.ksp)
+
     // alias(libs.plugins.roborazzi)
 
     alias(libs.plugins.secrets)
@@ -51,9 +53,16 @@ android {
     debug { signingConfig = signingConfigs.getByName("debugConfig") }
   }
   compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    // Modern Android/Kotlin/KSP အတွက် Java 17 သို့ တိုးမြှင့်ထားပါတယ်
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
   }
+  
+  // Kotlin Option များအတွက် Target ကို 17 ပြောင်းပေးခြင်း
+  kotlinOptions {
+      jvmTarget = "17"
+  }
+
   buildFeatures {
     compose = true
     buildConfig = true
@@ -62,7 +71,6 @@ android {
 }
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
-// to match the convention used in Web projects.
 secrets {
   propertiesFileName = ".env"
   defaultPropertiesFileName = ".env.example"
@@ -70,8 +78,6 @@ secrets {
 
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
 
-// Some unused dependencies are commented out below instead of being removed.
-// This makes it easy to add them back in the future if needed.
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
@@ -98,12 +104,8 @@ dependencies {
   implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
-  // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 
-  // Firebase Auth with Google Sign-In requires all of the following to be uncommented together.
-  // If you are using Firebase Auth with other providers (e.g. Email/Password), you may only need
-  // firebase-auth.
   // implementation(libs.firebase.auth)
   // implementation(libs.androidx.credentials)
   // implementation(libs.androidx.credentials.play.services)
@@ -132,6 +134,8 @@ dependencies {
   androidTestImplementation(libs.androidx.runner)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
-  "ksp"(libs.androidx.room.compiler)
-  "ksp"(libs.moshi.kotlin.codegen)
+
+  // KSP configuration ကို သန့်ရှင်းစွာ ပြန်ပြင်ထားပါတယ်
+  ksp(libs.androidx.room.compiler)
+  ksp(libs.moshi.kotlin.codegen)
 }
