@@ -1,4 +1,4 @@
-Name: Android CI/CD Pipeline
+name: Android CI/CD Pipeline
 
 on:
   push:
