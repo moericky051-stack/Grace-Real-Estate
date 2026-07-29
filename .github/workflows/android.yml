@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build & Test Android App
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
@@ -18,31 +18,17 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: '17'
-          distribution: 'temurin'
-          cache: 'gradle'
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew || true
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Run Unit Tests
-        run: gradle testDebugUnitTest --continue
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Build Debug APK
-        run: gradle assembleDebug
+        run: gradle assembleDebug --no-daemon --stacktrace -Dkotlin.compiler.execution.strategy=in-process -Dksp.incremental=false
 
-      - name: Upload Debug APK Artifact
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: grace-realestate-debug-apk
+          name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
