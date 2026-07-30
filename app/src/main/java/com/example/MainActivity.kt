@@ -62,6 +62,7 @@ fun RealEstateApp(
     val scope = rememberCoroutineScope()
 
     val filteredProperties by viewModel.filteredProperties.collectAsStateWithLifecycle()
+    val postsUiState by viewModel.postsUiState.collectAsStateWithLifecycle()
     val favoriteProperties by viewModel.favoriteProperties.collectAsStateWithLifecycle()
     val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
     val myListings by viewModel.myListings.collectAsStateWithLifecycle()
@@ -174,6 +175,7 @@ fun RealEstateApp(
                 composable("home") {
                     HomeScreen(
                         properties = filteredProperties,
+                        postsUiState = postsUiState,
                         searchQuery = searchQuery,
                         onSearchQueryChange = { viewModel.searchQuery.value = it },
                         selectedTab = selectedTab,

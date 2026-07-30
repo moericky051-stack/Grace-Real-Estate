@@ -43,10 +43,13 @@ import com.example.ui.theme.RealEstateGold
 import com.example.ui.theme.RealEstateGreen
 import com.example.ui.theme.RealEstateNavy
 
+import com.example.ui.viewmodel.PostsUiState
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     properties: List<Property>,
+    postsUiState: PostsUiState = PostsUiState.Success(properties),
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     selectedTab: String,
@@ -317,84 +320,136 @@ fun HomeScreen(
             }
 
             // Main Content Area (Property Feed in 2 Columns)
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                // Header title & count (Spans both 2 columns)
-                item(span = { GridItemSpan(2) }) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (selectedTab == "MY_LISTINGS") "ကျွန်ုပ်၏ ကြော်ငြာများ (${properties.size})" else "အိမ်ခြံမြေ စာရင်းများ (${properties.size})",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = RealEstateNavy
-                        )
-                        if (selectedCity != "ALL" || selectedPropType != "ALL" || maxPriceLakhs < 20000f) {
-                            TextButton(onClick = onResetFilters) {
-                                Text("စစ်ထုတ်မှု ဖျက်မည်", fontSize = 12.sp, color = RealEstateBlue)
-                            }
+            val displayList = when (postsUiState) {
+                is PostsUiState.Success -> (postsUiState as PostsUiState.Success).properties
+                else -> properties
+            }
+
+            // Subtle top progress bar when background fetching or syncing
+            if (isSyncing || (postsUiState is PostsUiState.Loading && displayList.isNotEmpty())) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp),
+                    color = RealEstateGold,
+                    trackColor = Color.Transparent
+                )
+            }
+
+            if (displayList.isEmpty() && postsUiState is PostsUiState.Loading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 40.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = RealEstateNavy)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("အချက်အလက်များ ရယူနေပါသည်...", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            } else if (displayList.isEmpty() && postsUiState is PostsUiState.Error) {
+                val errMsg = (postsUiState as PostsUiState.Error).message
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("အမှားအယွင်း ဖြစ်ပေါ်ခဲ့ပါသည်", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(errMsg, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(onClick = onRefreshSync, colors = ButtonDefaults.buttonColors(containerColor = RealEstateNavy)) {
+                            Text("ပြန်လည် ကြိုးစားမည်", color = RealEstateGold)
                         }
                     }
                 }
-
-                // Empty state if no properties found
-                if (properties.isEmpty()) {
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Header title & count (Spans both 2 columns)
                     item(span = { GridItemSpan(2) }) {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 32.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.SearchOff,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = if (selectedTab == "MY_LISTINGS") "သင် တင်ထားသော ကြော်ငြာ မရှိသေးပါ" else "ရှာဖွေမှုနှင့် ကိုက်ညီသော အိမ်ခြံမြေ မတွေ့ရှိပါ",
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = if (selectedTab == "MY_LISTINGS") "'အိမ်ခြံမြေ တင်မည်' ခလုတ်ကို နှိပ်၍ အသစ် တင်နိုင်ပါသည်" else "အခြား မြို့ သို့မဟုတ် ဈေးနှုန်း အတိုင်းအတာဖြင့် ပြန်လည် ရှာဖွေကြည့်ပါ",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Button(
-                                    onClick = onResetFilters,
-                                    colors = ButtonDefaults.buttonColors(containerColor = RealEstateNavy)
-                                ) {
-                                    Text("မူလအတိုင်း ပြန်ကြည့်မည်", color = RealEstateGold, fontSize = 12.sp)
+                            Text(
+                                text = if (selectedTab == "MY_LISTINGS") "ကျွန်ုပ်၏ ကြော်ငြာများ (${displayList.size})" else "အိမ်ခြံမြေ စာရင်းများ (${displayList.size})",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = RealEstateNavy
+                            )
+                            if (selectedCity != "ALL" || selectedPropType != "ALL" || maxPriceLakhs < 20000f) {
+                                TextButton(onClick = onResetFilters) {
+                                    Text("စစ်ထုတ်မှု ဖျက်မည်", fontSize = 12.sp, color = RealEstateBlue)
                                 }
                             }
                         }
                     }
-                } else {
-                    items(properties, key = { it.id }) { property ->
-                        PropertyCard(
-                            property = property,
-                            onFavoriteClick = { onFavoriteToggle(property) },
-                            onCardClick = { onPropertyClick(property.id) }
-                        )
+
+                    // Empty state if no properties found
+                    if (displayList.isEmpty()) {
+                        item(span = { GridItemSpan(2) }) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(24.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.SearchOff,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(48.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = if (selectedTab == "MY_LISTINGS") "သင် တင်ထားသော ကြော်ငြာ မရှိသေးပါ" else "ရှာဖွေမှုနှင့် ကိုက်ညီသော အိမ်ခြံမြေ မတွေ့ရှိပါ",
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = if (selectedTab == "MY_LISTINGS") "'အိမ်ခြံမြေ တင်မည်' ခလုတ်ကို နှိပ်၍ အသစ် တင်နိုင်ပါသည်" else "အခြား မြို့ သို့မဟုတ် ဈေးနှုန်း အတိုင်းအတာဖြင့် ပြန်လည် ရှာဖွေကြည့်ပါ",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Button(
+                                        onClick = onResetFilters,
+                                        colors = ButtonDefaults.buttonColors(containerColor = RealEstateNavy)
+                                    ) {
+                                        Text("မူလအတိုင်း ပြန်ကြည့်မည်", color = RealEstateGold, fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        items(
+                            items = displayList,
+                            key = { property -> if (property.docId.isNotBlank()) property.docId else "local_${property.id}" }
+                        ) { property ->
+                            PropertyCard(
+                                property = property,
+                                onFavoriteClick = { onFavoriteToggle(property) },
+                                onCardClick = { onPropertyClick(property.id) }
+                            )
+                        }
                     }
                 }
             }

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -27,7 +28,7 @@ class PropertyRepository(
     val firebaseService = FirebaseService(context)
 
     // Room DB Flow for offline access
-    val allProperties: Flow<List<Property>> = propertyDao.getAllProperties()
+    val allProperties: Flow<List<Property>> = propertyDao.getAllProperties().distinctUntilChanged()
     val favoriteProperties: Flow<List<Property>> = propertyDao.getFavoriteProperties()
 
     private val _userProfile = MutableStateFlow<UserProfile?>(null)
@@ -56,28 +57,73 @@ class PropertyRepository(
         // Start Realtime Firestore Listener to sync Firestore properties -> Room DB
         externalScope.launch {
             try {
-                firebaseService.observeAllProperties().collectLatest { firestoreList ->
-                    if (firestoreList.isNotEmpty()) {
-                        for (prop in firestoreList) {
-                            val count = propertyDao.countByTitleAndPhone(prop.title, prop.agentPhone)
-                            if (count == 0) {
-                                propertyDao.insertProperty(prop)
-                            } else {
-                                // Update existing local entry with Firestore docId/images
-                                val existing = propertyDao.getPropertyByDocId(prop.docId)
-                                if (existing != null) {
-                                    propertyDao.insertProperty(prop.copy(id = existing.id, isFavorite = existing.isFavorite))
-                                } else {
-                                    propertyDao.insertProperty(prop)
+                firebaseService.observeAllProperties()
+                    .distinctUntilChanged()
+                    .collectLatest { firestoreList ->
+                        if (firestoreList.isNotEmpty()) {
+                            val allLocal = propertyDao.getAllPropertiesList()
+                            val existingDocMap = allLocal.filter { it.docId.isNotBlank() }.associateBy { it.docId }
+                            val existingTitlePhoneMap = allLocal.associateBy { "${it.title}_${it.agentPhone}" }
+
+                            val toBatchInsert = mutableListOf<Property>()
+
+                            for (prop in firestoreList) {
+                                var existing: Property? = if (prop.docId.isNotBlank()) {
+                                    existingDocMap[prop.docId]
+                                } else null
+
+                                if (existing == null) {
+                                    existing = existingTitlePhoneMap["${prop.title}_${prop.agentPhone}"]
                                 }
+
+                                if (existing != null) {
+                                    val updatedProp = prop.copy(
+                                        id = existing.id,
+                                        isFavorite = existing.isFavorite,
+                                        docId = if (prop.docId.isNotBlank()) prop.docId else existing.docId
+                                    )
+                                    if (!isPropertyIdentical(existing, updatedProp)) {
+                                        toBatchInsert.add(updatedProp)
+                                    }
+                                } else {
+                                    toBatchInsert.add(prop)
+                                }
+                            }
+
+                            if (toBatchInsert.isNotEmpty()) {
+                                propertyDao.insertProperties(toBatchInsert)
                             }
                         }
                     }
-                }
             } catch (e: Exception) {
                 Log.e("PropertyRepository", "Firestore realtime listener error: ${e.message}")
             }
         }
+    }
+
+    private fun isPropertyIdentical(p1: Property, p2: Property): Boolean {
+        return p1.id == p2.id &&
+               p1.title == p2.title &&
+               p1.listingType == p2.listingType &&
+               p1.propertyType == p2.propertyType &&
+               p1.priceLakhs == p2.priceLakhs &&
+               p1.pricePeriod == p2.pricePeriod &&
+               p1.city == p2.city &&
+               p1.township == p2.township &&
+               p1.address == p2.address &&
+               p1.areaSqft == p2.areaSqft &&
+               p1.bedrooms == p2.bedrooms &&
+               p1.bathrooms == p2.bathrooms &&
+               p1.floorLevel == p2.floorLevel &&
+               p1.furnishing == p2.furnishing &&
+               p1.deedType == p2.deedType &&
+               p1.description == p2.description &&
+               p1.agentName == p2.agentName &&
+               p1.agentPhone == p2.agentPhone &&
+               p1.imageResName == p2.imageResName &&
+               p1.isFavorite == p2.isFavorite &&
+               p1.userId == p2.userId &&
+               p1.docId == p2.docId
     }
 
     fun getPropertyById(id: Long): Flow<Property?> = propertyDao.getPropertyById(id)

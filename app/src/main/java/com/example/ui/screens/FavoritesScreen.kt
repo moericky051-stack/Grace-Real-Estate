@@ -90,7 +90,10 @@ fun FavoritesScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(favoriteProperties, key = { it.id }) { property ->
+                    items(
+                        items = favoriteProperties,
+                        key = { property -> if (property.docId.isNotBlank()) property.docId else "local_${property.id}" }
+                    ) { property ->
                         PropertyCard(
                             property = property,
                             onCardClick = { onPropertyClick(property.id) },

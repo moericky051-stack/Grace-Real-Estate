@@ -18,7 +18,15 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.firstOrNull
+
+sealed interface PostsUiState {
+    object Loading : PostsUiState
+    data class Success(val properties: List<Property>) : PostsUiState
+    object Empty : PostsUiState
+    data class Error(val message: String) : PostsUiState
+}
 
 class RealEstateViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -42,13 +50,22 @@ class RealEstateViewModel(application: Application) : AndroidViewModel(applicati
         selectedTheme.value = theme
     }
 
+    val isInitialLoading = MutableStateFlow(true)
+    val postsErrorMessage = MutableStateFlow<String?>(null)
+
     init {
         val db = AppDatabase.getInstance(application)
         repository = PropertyRepository(db.propertyDao(), application)
         userProfile = repository.userProfile
 
         viewModelScope.launch {
-            repository.checkAndSeedInitialData()
+            try {
+                repository.checkAndSeedInitialData()
+            } catch (e: Exception) {
+                Log.e("RealEstateViewModel", "Error seeding data: ${e.message}")
+            } finally {
+                isInitialLoading.value = false
+            }
         }
     }
 
@@ -170,7 +187,7 @@ class RealEstateViewModel(application: Application) : AndroidViewModel(applicati
         maxPriceLakhs
     ) { query, tab, city, propType, maxPrice ->
         FilterParams(query, tab, city, propType, maxPrice, repository.firebaseService.currentUserId)
-    }
+    }.distinctUntilChanged()
 
     val filteredProperties: StateFlow<List<Property>> = combine(
         repository.allProperties,
@@ -198,10 +215,28 @@ class RealEstateViewModel(application: Application) : AndroidViewModel(applicati
 
             matchesQuery && matchesTab && matchesCity && matchesPropType && matchesPrice && matchesBeds
         }
-    }.stateIn(
+    }.distinctUntilChanged().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
+    )
+
+    val postsUiState: StateFlow<PostsUiState> = combine(
+        filteredProperties,
+        isInitialLoading,
+        postsErrorMessage
+    ) { properties, loading, error ->
+        when {
+            // Keep previous/cached state in UI while fetching/updating data in background
+            properties.isNotEmpty() -> PostsUiState.Success(properties)
+            error != null -> PostsUiState.Error(error)
+            loading -> PostsUiState.Loading
+            else -> PostsUiState.Empty
+        }
+    }.distinctUntilChanged().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = PostsUiState.Success(emptyList())
     )
 
     val myListings: StateFlow<List<Property>> = repository.allProperties
