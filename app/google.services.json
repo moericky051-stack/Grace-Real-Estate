@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "784223156912",
+    "project_id": "property-hub-6833e",
+    "storage_bucket": "property-hub-6833e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:784223156912:android:00a3fe8dd99433c1ecd975",
+        "android_client_info": {
+          "package_name": "com.aistudio.realestate.shwehouse.edeaff"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbdUxh2W0UMNcGyotjxf6pHvVePTrL0xI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
