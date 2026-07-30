@@ -1,18 +1,84 @@
 package com.example.data.repository
 
+import android.content.Context
 import android.util.Log
 import com.example.data.db.PropertyDao
+import com.example.data.firebase.FirebaseService
+import com.example.data.firebase.UserProfile
 import com.example.data.model.Property
-import com.example.data.remote.CloudNetworkClient
-import com.example.data.remote.CloudPropertyDto
+import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class PropertyRepository(private val propertyDao: PropertyDao) {
+class PropertyRepository(
+    private val propertyDao: PropertyDao,
+    context: Context
+) {
 
+    val firebaseService = FirebaseService(context)
+
+    // Room DB Flow for offline access
     val allProperties: Flow<List<Property>> = propertyDao.getAllProperties()
     val favoriteProperties: Flow<List<Property>> = propertyDao.getFavoriteProperties()
+
+    private val _userProfile = MutableStateFlow<UserProfile?>(null)
+    val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
+
+    private val externalScope = CoroutineScope(Dispatchers.IO)
+
+    init {
+        // Start listening to Firebase Auth state
+        externalScope.launch {
+            firebaseService.observeAuthState().collectLatest { user ->
+                if (user != null) {
+                    val profile = firebaseService.getUserProfile(user.uid)
+                    _userProfile.value = profile ?: UserProfile(
+                        uid = user.uid,
+                        email = user.email ?: "",
+                        name = user.displayName ?: if (user.isAnonymous) "Guest User" else "User",
+                        createdAt = System.currentTimeMillis()
+                    )
+                } else {
+                    _userProfile.value = null
+                }
+            }
+        }
+
+        // Start Realtime Firestore Listener to sync Firestore properties -> Room DB
+        externalScope.launch {
+            try {
+                firebaseService.observeAllProperties().collectLatest { firestoreList ->
+                    if (firestoreList.isNotEmpty()) {
+                        for (prop in firestoreList) {
+                            val count = propertyDao.countByTitleAndPhone(prop.title, prop.agentPhone)
+                            if (count == 0) {
+                                propertyDao.insertProperty(prop)
+                            } else {
+                                // Update existing local entry with Firestore docId/images
+                                val existing = propertyDao.getPropertyByDocId(prop.docId)
+                                if (existing != null) {
+                                    propertyDao.insertProperty(prop.copy(id = existing.id, isFavorite = existing.isFavorite))
+                                } else {
+                                    propertyDao.insertProperty(prop)
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("PropertyRepository", "Firestore realtime listener error: ${e.message}")
+            }
+        }
+    }
 
     fun getPropertyById(id: Long): Flow<Property?> = propertyDao.getPropertyById(id)
 
@@ -20,54 +86,64 @@ class PropertyRepository(private val propertyDao: PropertyDao) {
         propertyDao.updateFavorite(id, !currentStatus)
     }
 
-    suspend fun insertProperty(property: Property): Long {
-        val insertedId = propertyDao.insertProperty(property)
-        val insertedProp = property.copy(id = insertedId)
-
-        // Push to Cloud so all users see this property
-        withContext(Dispatchers.IO) {
-            try {
-                val dto = CloudPropertyDto.fromProperty(insertedProp)
-                val response = CloudNetworkClient.api.postCloudProperty(dto)
-                if (response.isSuccessful) {
-                    Log.d("PropertyRepository", "Successfully synced new property to cloud: ${response.body()?.name}")
-                } else {
-                    Log.e("PropertyRepository", "Failed to sync to cloud: ${response.code()}")
-                }
-            } catch (e: Exception) {
-                Log.e("PropertyRepository", "Cloud sync error: ${e.message}")
-            }
-        }
-        return insertedId
-    }
-
-    suspend fun deleteProperty(id: Long) {
-        propertyDao.deleteProperty(id)
-    }
-
-    suspend fun syncWithCloud(): Result<Int> = withContext(Dispatchers.IO) {
+    suspend fun insertPropertyWithFirebase(
+        property: Property,
+        selectedImagePaths: List<String>
+    ): Result<Long> = withContext(Dispatchers.IO) {
         try {
-            val response = CloudNetworkClient.api.getAllCloudProperties()
-            if (response.isSuccessful) {
-                val cloudMap = response.body()
-                var newCount = 0
-                if (!cloudMap.isNullOrEmpty()) {
-                    for ((key, dto) in cloudMap) {
-                        val count = propertyDao.countByTitleAndPhone(dto.title, dto.agentPhone)
-                        if (count == 0) {
-                            val newProp = dto.toProperty()
-                            propertyDao.insertProperty(newProp)
-                            newCount++
-                        }
-                    }
-                }
-                Result.success(newCount)
-            } else {
-                Result.failure(Exception("HTTP error ${response.code()}"))
-            }
+            // Upload images to Storage & save doc to Firestore
+            val firestoreResult = firebaseService.addPropertyToFirestore(property, selectedImagePaths)
+            val docId = firestoreResult.getOrDefault("")
+
+            // Insert locally in Room DB
+            val finalProp = property.copy(
+                docId = docId,
+                userId = firebaseService.currentUserId,
+                imageResName = if (selectedImagePaths.isNotEmpty()) selectedImagePaths.joinToString(",") else property.imageResName
+            )
+            val localId = propertyDao.insertProperty(finalProp)
+
+            Result.success(localId)
         } catch (e: Exception) {
-            Log.e("PropertyRepository", "syncWithCloud error: ${e.message}")
-            Result.failure(e)
+            Log.e("PropertyRepository", "insertPropertyWithFirebase error: ${e.message}")
+            // Fallback: save locally
+            val localId = propertyDao.insertProperty(property)
+            Result.success(localId)
+        }
+    }
+
+    suspend fun updatePropertyWithFirebase(
+        property: Property,
+        selectedImagePaths: List<String>
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            if (property.docId.isNotBlank()) {
+                firebaseService.updatePropertyInFirestore(property, selectedImagePaths)
+            }
+            propertyDao.insertProperty(property)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("PropertyRepository", "updatePropertyWithFirebase error: ${e.message}")
+            propertyDao.insertProperty(property)
+            Result.success(Unit)
+        }
+    }
+
+    suspend fun deletePropertyWithFirebase(property: Property): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            if (property.docId.isNotBlank()) {
+                firebaseService.deletePropertyFromFirestore(property)
+            }
+            if (property.id > 0) {
+                propertyDao.deleteProperty(property.id)
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("PropertyRepository", "deletePropertyWithFirebase error: ${e.message}")
+            if (property.id > 0) {
+                propertyDao.deleteProperty(property.id)
+            }
+            Result.success(Unit)
         }
     }
 
@@ -139,92 +215,9 @@ class PropertyRepository(private val propertyDao: PropertyDao) {
                     agentPhone = "09250123456",
                     agentType = "Verified Agent",
                     isFavorite = false
-                ),
-                Property(
-                    title = "ပြင်ဦးလွင် တောင်လှေကား မြေကွက်ကျယ် အမြန်ရောင်းမည်",
-                    listingType = "BUY",
-                    propertyType = "Land",
-                    priceLakhs = 4200.0,
-                    pricePeriod = "TOTAL",
-                    city = "Pyin Oo Lwin",
-                    township = "ရပ်ကွက် (၆) ပြင်ဦးလွင်",
-                    address = "အမျိုးသားကန်တော်ကြီးဥယျာဉ်အနီး၊ ပြင်ဦးလွင်။",
-                    areaSqft = 7200,
-                    bedrooms = 0,
-                    bathrooms = 0,
-                    floorLevel = "Land Plot",
-                    furnishing = "Unfurnished",
-                    deedType = "Grant Land (ဂရန်မြေ ၆၀ နှစ်)",
-                    description = "ရာသီဥတု သာယာအေးမြသော ပြင်ဦးလွင် ကန်တော်ကြီးအနီး မြေကွက်ကျယ်။ အပန်းဖြေစခန်း သို့မဟုတ် လုံးချင်းအိမ် ဆောက်လုပ်ရန် သင့်တော်သည်။ စာရွက်စာတမ်း စုံလင်ပါသည်။",
-                    imageResName = "img_property_villa",
-                    agentName = "ဦးကျော်စွာ (မန္တလေး ရွှေမြေ)",
-                    agentPhone = "09400223344",
-                    agentType = "Owner Direct",
-                    isFavorite = true
-                ),
-                Property(
-                    title = "မန္တလေး ချမ်းအေးသာစံ မြို့နယ် တိုက်ခန်းပြင်ဆင်ပြီး ငှားမည်",
-                    listingType = "RENT",
-                    propertyType = "Apartment",
-                    priceLakhs = 18.0,
-                    pricePeriod = "PER_MONTH",
-                    city = "Mandalay",
-                    township = "ချမ်းအေးသာစံ (Chanayethazan)",
-                    address = "၇၈ လမ်းနှင့် ၃၀ လမ်းထောင့်၊ မန္တလေး။",
-                    areaSqft = 950,
-                    bedrooms = 2,
-                    bathrooms = 1,
-                    floorLevel = "2nd Floor",
-                    furnishing = "Fully Furnished",
-                    deedType = "Apartment Deed",
-                    description = "မန္တလေးဈေးချိုနှင့် လမ်းလျှောက်အကွာအဝေးရှိ ပြင်ဆင်ပြီး တိုက်ခန်း။ အဲကွန်း ၃ လုံး၊ ရေပူအေး၊ မီးဖိုချောင် ကက်ဘိနက် ပါဝင်ပြီးဖြစ်ပါသည်။",
-                    imageResName = "img_hero_banner",
-                    agentName = "မသီတာ (Mandalay Homes)",
-                    agentPhone = "09970112233",
-                    agentType = "Verified Agent",
-                    isFavorite = false
-                ),
-                Property(
-                    title = "တောင်ကြီး စန်တာရိုဆာ လမ်းမကြီးပေါ် စီးပွားရေးမြေ ရောင်းမည်",
-                    listingType = "BUY",
-                    propertyType = "Land",
-                    priceLakhs = 9500.0,
-                    pricePeriod = "TOTAL",
-                    city = "Taunggyi",
-                    township = "ရေအေးကွင်း၊ တောင်ကြီးမြို့။",
-                    address = "စန်တာရိုဆာ လမ်းမကြီးပေါ်၊ တောင်ကြီး။",
-                    areaSqft = 4800,
-                    bedrooms = 0,
-                    bathrooms = 0,
-                    floorLevel = "Land Plot",
-                    furnishing = "Unfurnished",
-                    deedType = "Grant Land (ဂရန်အမည်ပေါက်)",
-                    description = "တောင်ကြီးမြို့လယ် စီးပွားရေးဇုန်အနီး လမ်းမကြီးတိုက်ရိုက်မျက်နှာစာရှိ မြေကွက်။ ဟိုတယ်၊ ကွန်ဒို သို့မဟုတ် မောလ် ဆောက်လုပ်ရန် သင့်တော်ပါသည်။",
-                    imageResName = "img_property_villa",
-                    agentName = "စောဟန်လင်း (Shan Hills Realty)",
-                    agentPhone = "09880123999",
-                    agentType = "Exclusive Agent",
-                    isFavorite = false
                 )
             )
             propertyDao.insertProperties(sampleProperties)
-
-            // Seed to cloud if empty
-            withContext(Dispatchers.IO) {
-                try {
-                    val res = CloudNetworkClient.api.getAllCloudProperties()
-                    if (res.isSuccessful && res.body().isNullOrEmpty()) {
-                        sampleProperties.forEach { p ->
-                            CloudNetworkClient.api.postCloudProperty(CloudPropertyDto.fromProperty(p))
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("PropertyRepository", "Initial cloud seed error: ${e.message}")
-                }
-            }
         }
-
-        // Always sync with cloud on app startup
-        syncWithCloud()
     }
 }

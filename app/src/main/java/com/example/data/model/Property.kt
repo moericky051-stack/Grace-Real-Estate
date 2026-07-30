@@ -7,6 +7,8 @@ import androidx.room.PrimaryKey
 data class Property(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    val docId: String = "",
+    val userId: String = "",
     val title: String, // ခေါင်းစဉ်
     val listingType: String, // "BUY" (ဝယ်ရန်/ရောင်းရန်) or "RENT" (ငှားရန်)
     val propertyType: String, // "Condo", "Apartment", "Land", "House", "Commercial"
@@ -22,10 +24,11 @@ data class Property(
     val furnishing: String = "Fully Furnished", // ပရိဘောဂ
     val deedType: String = "Grant Land (ဂရန်မြေ)", // စာရွက်စာတမ်း အထောက်အထား
     val description: String, // အသေးစိတ် ဖော်ပြချက်
-    val imageResName: String = "img_hero_banner", // image drawable name
+    val imageResName: String = "img_hero_banner", // image drawable name or firebase storage URLs
     val agentName: String = "ဦးမင်းသူ (ရွှေအိမ် အကျိုးဆောင်)",
     val agentPhone: String = "09450012345",
     val agentType: String = "Verified Agent",
+    val status: String = "ACTIVE", // "ACTIVE", "SOLD", "RENTED"
     val isFavorite: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )

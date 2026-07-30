@@ -30,6 +30,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.ui.components.LoadingOverlay
 import com.example.ui.screens.*
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.RealEstateGold
@@ -62,6 +63,8 @@ fun RealEstateApp(
 
     val filteredProperties by viewModel.filteredProperties.collectAsStateWithLifecycle()
     val favoriteProperties by viewModel.favoriteProperties.collectAsStateWithLifecycle()
+    val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
+    val myListings by viewModel.myListings.collectAsStateWithLifecycle()
 
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val selectedTab by viewModel.selectedListingTypeTab.collectAsStateWithLifecycle()
@@ -70,6 +73,8 @@ fun RealEstateApp(
     val maxPriceLakhs by viewModel.maxPriceLakhs.collectAsStateWithLifecycle()
     val minBedrooms by viewModel.minBedrooms.collectAsStateWithLifecycle()
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val loadingMessage by viewModel.loadingMessage.collectAsStateWithLifecycle()
     val currentTheme by viewModel.selectedTheme.collectAsStateWithLifecycle()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -84,232 +89,330 @@ fun RealEstateApp(
 
     val showBottomBar = currentRoute in listOf("home", "favorites", "calculator", "agents")
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = {
-            AnimatedVisibility(
-                visible = showBottomBar,
-                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-            ) {
-                Surface(
-                    color = currentTheme.headerColor,
-                    shadowElevation = 16.dp,
-                    border = BorderStroke(1.dp, RealEstateGold.copy(alpha = 0.5f))
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            bottomBar = {
+                AnimatedVisibility(
+                    visible = showBottomBar,
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
                 ) {
-                    NavigationBar(
-                        containerColor = currentTheme.headerColor,
-                        contentColor = RealEstateGold,
-                        tonalElevation = 0.dp,
-                        modifier = Modifier.height(60.dp),
-                        windowInsets = WindowInsets(0, 0, 0, 0)
+                    Surface(
+                        color = currentTheme.headerColor,
+                        shadowElevation = 16.dp,
+                        border = BorderStroke(1.dp, RealEstateGold.copy(alpha = 0.5f))
                     ) {
-                        bottomNavItems.forEach { item ->
-                            val isSelected = currentRoute == item.route
-                            NavigationBarItem(
-                                selected = isSelected,
-                                alwaysShowLabel = true,
-                                onClick = {
-                                    navController.navigate(item.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
+                        NavigationBar(
+                            containerColor = currentTheme.headerColor,
+                            contentColor = RealEstateGold,
+                            tonalElevation = 0.dp,
+                            modifier = Modifier.height(60.dp),
+                            windowInsets = WindowInsets(0, 0, 0, 0)
+                        ) {
+                            bottomNavItems.forEach { item ->
+                                val isSelected = currentRoute == item.route
+                                NavigationBarItem(
+                                    selected = isSelected,
+                                    alwaysShowLabel = true,
+                                    onClick = {
+                                        navController.navigate(item.route) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
                                         }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                icon = {
-                                    BadgedBox(
-                                        badge = {
-                                            if (item.badgeCount > 0) {
-                                                Badge(containerColor = RealEstateGold) {
-                                                    Text("${item.badgeCount}", color = currentTheme.headerColor, fontWeight = FontWeight.ExtraBold, fontSize = 9.sp)
+                                    },
+                                    icon = {
+                                        BadgedBox(
+                                            badge = {
+                                                if (item.badgeCount > 0) {
+                                                    Badge(containerColor = RealEstateGold) {
+                                                        Text("${item.badgeCount}", color = currentTheme.headerColor, fontWeight = FontWeight.ExtraBold, fontSize = 9.sp)
+                                                    }
                                                 }
                                             }
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                                                contentDescription = item.label,
+                                                tint = if (isSelected) RealEstateGold else Color.White.copy(alpha = 0.85f),
+                                                modifier = Modifier.size(22.dp)
+                                            )
                                         }
-                                    ) {
-                                        Icon(
-                                            imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                                            contentDescription = item.label,
-                                            tint = if (isSelected) RealEstateGold else Color.White.copy(alpha = 0.85f),
-                                            modifier = Modifier.size(22.dp)
+                                    },
+                                    label = {
+                                        Text(
+                                            text = item.label,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) RealEstateGold else Color.White.copy(alpha = 0.85f)
                                         )
-                                    }
-                                },
-                                label = {
-                                    Text(
-                                        text = item.label,
-                                        fontSize = 11.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) RealEstateGold else Color.White.copy(alpha = 0.85f)
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        indicatorColor = RealEstateGold.copy(alpha = 0.25f),
+                                        selectedIconColor = RealEstateGold,
+                                        unselectedIconColor = Color.White.copy(alpha = 0.85f),
+                                        selectedTextColor = RealEstateGold,
+                                        unselectedTextColor = Color.White.copy(alpha = 0.85f)
                                     )
-                                },
-                                colors = NavigationBarItemDefaults.colors(
-                                    indicatorColor = RealEstateGold.copy(alpha = 0.25f),
-                                    selectedIconColor = RealEstateGold,
-                                    unselectedIconColor = Color.White.copy(alpha = 0.85f),
-                                    selectedTextColor = RealEstateGold,
-                                    unselectedTextColor = Color.White.copy(alpha = 0.85f)
                                 )
-                            )
+                            }
                         }
                     }
                 }
             }
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = "home",
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                // 1. Home Feed
+                composable("home") {
+                    HomeScreen(
+                        properties = filteredProperties,
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = { viewModel.searchQuery.value = it },
+                        selectedTab = selectedTab,
+                        onTabSelected = { viewModel.selectedListingTypeTab.value = it },
+                        selectedCity = selectedCity,
+                        onCitySelected = { viewModel.selectedCity.value = it },
+                        selectedPropType = selectedPropType,
+                        onPropTypeSelected = { viewModel.selectedPropertyType.value = it },
+                        maxPriceLakhs = maxPriceLakhs,
+                        onPriceChanged = { viewModel.maxPriceLakhs.value = it },
+                        minBedrooms = minBedrooms,
+                        onBedroomsSelected = { viewModel.minBedrooms.value = it },
+                        onFavoriteToggle = { property ->
+                            viewModel.toggleFavorite(property)
+                            val statusText = if (property.isFavorite) "အကြိုက်ဆုံးမှ ဖယ်ရှားလိုက်ပါပြီ" else "အကြိုက်ဆုံးစာရင်းသို့ ထည့်သွင်းလိုက်ပါပြီ"
+                            scope.launch { snackbarHostState.showSnackbar(statusText) }
+                        },
+                        onPropertyClick = { propertyId ->
+                            navController.navigate("detail/$propertyId")
+                        },
+                        onPostNewClick = {
+                            if (viewModel.isUserSignedIn()) {
+                                navController.navigate("post")
+                            } else {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("ကြော်ငြာတင်ရန် အကောင့်ဝင်ရန် လိုအပ်ပါသည်။")
+                                }
+                                navController.navigate("auth")
+                            }
+                        },
+                        onResetFilters = {
+                            viewModel.resetFilters()
+                        },
+                        isSyncing = isSyncing,
+                        onRefreshSync = {
+                            viewModel.refreshCloudData { success ->
+                                scope.launch {
+                                    val msg = if (success) "အချက်အလက်များကို Cloud database နှင့် ချိတ်ဆက် update လုပ်ပြီးပါပြီ" else "Cloud ချိတ်ဆက်မှု မအောင်မြင်ပါ။ နောက်မှ ပြန်လည် ကြိုးစားပါ။"
+                                    snackbarHostState.showSnackbar(msg)
+                                }
+                            }
+                        },
+                        selectedTheme = currentTheme,
+                        onThemeSelected = { viewModel.setTheme(it) },
+                        userProfile = userProfile,
+                        isSignedIn = viewModel.isUserSignedIn(),
+                        myListings = myListings,
+                        onSignIn = { email, pass, onError ->
+                            viewModel.signIn(email, pass, {
+                                scope.launch { snackbarHostState.showSnackbar("အကောင့်ဝင်ရောက်ခြင်း အောင်မြင်ပါသည်။") }
+                            }, onError)
+                        },
+                        onSignUp = { email, pass, name, phone, agency, onError ->
+                            viewModel.signUp(email, pass, name, phone, agency, {
+                                scope.launch { snackbarHostState.showSnackbar("အကောင့်သစ် အောင်မြင်စွာ ပြုလုပ်ပြီးပါပြီ။") }
+                            }, onError)
+                        },
+                        onUpdateProfile = { name, phone, agency, onError ->
+                            viewModel.updateProfileInfo(name, phone, agency, {
+                                scope.launch { snackbarHostState.showSnackbar("ကိုယ်ရေးအချက်အလက် ပြင်ဆင်ပြီးပါပြီ။") }
+                            }, onError)
+                        },
+                        onSignOut = {
+                            viewModel.signOut()
+                            scope.launch { snackbarHostState.showSnackbar("အကောင့်မှ ထွက်လိုက်ပါပြီ။") }
+                        },
+                        onEditProperty = { property ->
+                            navController.navigate("edit/${property.id}")
+                        },
+                        onDeleteProperty = { propertyId ->
+                            viewModel.deleteProperty(propertyId) {
+                                scope.launch { snackbarHostState.showSnackbar("ကြော်ငြာ ဖျက်ပြီးပါပြီ။") }
+                            }
+                        },
+                        onOpenAuthClick = {
+                            navController.navigate("auth")
+                        }
+                    )
+                }
+
+                // Auth Screen (Full Screen)
+                composable("auth") {
+                    AuthScreen(
+                        userProfile = userProfile,
+                        isSignedIn = viewModel.isUserSignedIn(),
+                        myListings = myListings,
+                        onBackClick = { navController.popBackStack() },
+                        onSignIn = { email, pass, onError ->
+                            viewModel.signIn(email, pass, {
+                                scope.launch { snackbarHostState.showSnackbar("အကောင့်ဝင်ရောက်ခြင်း အောင်မြင်ပါသည်။") }
+                                navController.popBackStack()
+                            }, onError)
+                        },
+                        onSignUp = { email, pass, name, phone, agency, onError ->
+                            viewModel.signUp(email, pass, name, phone, agency, {
+                                scope.launch { snackbarHostState.showSnackbar("အကောင့်သစ် အောင်မြင်စွာ ပြုလုပ်ပြီးပါပြီ။") }
+                                navController.popBackStack()
+                            }, onError)
+                        },
+                        onUpdateProfile = { name, phone, agency, onError ->
+                            viewModel.updateProfileInfo(name, phone, agency, {
+                                scope.launch { snackbarHostState.showSnackbar("ကိုယ်ရေးအချက်အလက် ပြင်ဆင်ပြီးပါပြီ။") }
+                            }, onError)
+                        },
+                        onSignOut = {
+                            viewModel.signOut()
+                            scope.launch { snackbarHostState.showSnackbar("အကောင့်မှ ထွက်လိုက်ပါပြီ။") }
+                        },
+                        onPropertyClick = { propertyId ->
+                            navController.navigate("detail/$propertyId")
+                        },
+                        onEditProperty = { property ->
+                            navController.navigate("edit/${property.id}")
+                        },
+                        onDeleteProperty = { propertyId ->
+                            viewModel.deleteProperty(propertyId) {
+                                scope.launch { snackbarHostState.showSnackbar("ကြော်ငြာ ဖျက်ပြီးပါပြီ။") }
+                            }
+                        }
+                    )
+                }
+
+                // 2. Property Detail Screen
+                composable(
+                    route = "detail/{propertyId}",
+                    arguments = listOf(navArgument("propertyId") { type = NavType.LongType })
+                ) { backStackEntry ->
+                    val propId = backStackEntry.arguments?.getLong("propertyId") ?: 0L
+                    val property by viewModel.getPropertyById(propId).collectAsStateWithLifecycle()
+
+                    PropertyDetailScreen(
+                        property = property,
+                        onBackClick = { navController.popBackStack() },
+                        onFavoriteToggle = { prop ->
+                            viewModel.toggleFavorite(prop)
+                            val statusText = if (prop.isFavorite) "အကြိုက်ဆုံးမှ ဖယ်ရှားလိုက်ပါပြီ" else "အကြိုက်ဆုံးစာရင်းသို့ ထည့်သွင်းလိုက်ပါပြီ"
+                            scope.launch { snackbarHostState.showSnackbar(statusText) }
+                        },
+                        onCalculateLoanClick = { priceLakhs ->
+                            navController.navigate("calculator?price=$priceLakhs")
+                        },
+                        onEditClick = { prop ->
+                            navController.navigate("edit/${prop.id}")
+                        },
+                        onDeleteClick = { id ->
+                            viewModel.deleteProperty(id) {
+                                scope.launch { snackbarHostState.showSnackbar("ကြော်ငြာ ဖျက်လိုက်ပါပြီ။") }
+                                navController.popBackStack()
+                            }
+                        }
+                    )
+                }
+
+                // 3. Post Listing Screen
+                composable("post") {
+                    val isSignedIn = viewModel.isUserSignedIn()
+                    if (!isSignedIn) {
+                        LaunchedEffect(Unit) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("ကြော်ငြာတင်ရန် အကောင့်ဝင်ရန် လိုအပ်ပါသည်။")
+                            }
+                            navController.navigate("auth") {
+                                popUpTo("post") { inclusive = true }
+                            }
+                        }
+                    } else {
+                        PostPropertyScreen(
+                            onBackClick = { navController.popBackStack() },
+                            onSubmitProperty = { title, listingType, propType, priceLakhs, pricePeriod, city, township, address, area, beds, baths, floor, furn, deed, desc, name, phone, imgRes ->
+                                viewModel.postNewProperty(
+                                    title, listingType, propType, priceLakhs, pricePeriod, city, township, address, area, beds, baths, floor, furn, deed, desc, name, phone, imgRes
+                                ) {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("ကြော်ငြာ အောင်မြင်စွာ တင်ပြီးပါပြီ။")
+                                    }
+                                    navController.popBackStack()
+                                }
+                            }
+                        )
+                    }
+                }
+
+                // 3b. Edit Listing Screen
+                composable(
+                    route = "edit/{propertyId}",
+                    arguments = listOf(navArgument("propertyId") { type = NavType.LongType })
+                ) { backStackEntry ->
+                    val propId = backStackEntry.arguments?.getLong("propertyId") ?: 0L
+                    val property by viewModel.getPropertyById(propId).collectAsStateWithLifecycle()
+
+                    PostPropertyScreen(
+                        onBackClick = { navController.popBackStack() },
+                        existingProperty = property,
+                        onUpdateProperty = { updated ->
+                            viewModel.updateProperty(updated) {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("ကြော်ငြာ ပြင်ဆင်ပြီးပါပြီ။")
+                                }
+                                navController.popBackStack()
+                            }
+                        },
+                        onSubmitProperty = { _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> }
+                    )
+                }
+
+                // 4. Saved / Favorites Screen
+                composable("favorites") {
+                    FavoritesScreen(
+                        favoriteProperties = favoriteProperties,
+                        onPropertyClick = { propertyId ->
+                            navController.navigate("detail/$propertyId")
+                        },
+                        onFavoriteToggle = { property ->
+                            viewModel.toggleFavorite(property)
+                            scope.launch { snackbarHostState.showSnackbar("အကြိုက်ဆုံးမှ ဖယ်ရှားလိုက်ပါပြီ") }
+                        }
+                    )
+                }
+
+                // 5. Calculator Screen
+                composable(
+                    route = "calculator?price={price}",
+                    arguments = listOf(navArgument("price") {
+                        type = NavType.FloatType
+                        defaultValue = 3500f
+                    })
+                ) { backStackEntry ->
+                    val priceVal = backStackEntry.arguments?.getFloat("price") ?: 3500f
+                    CalculatorScreen(initialPriceLakhs = priceVal.toDouble())
+                }
+
+                // 6. Agents Directory
+                composable("agents") {
+                    AgentDirectoryScreen()
+                }
+            }
         }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = "home",
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            // 1. Home Feed
-            composable("home") {
-                HomeScreen(
-                    properties = filteredProperties,
-                    searchQuery = searchQuery,
-                    onSearchQueryChange = { viewModel.searchQuery.value = it },
-                    selectedTab = selectedTab,
-                    onTabSelected = { viewModel.selectedListingTypeTab.value = it },
-                    selectedCity = selectedCity,
-                    onCitySelected = { viewModel.selectedCity.value = it },
-                    selectedPropType = selectedPropType,
-                    onPropTypeSelected = { viewModel.selectedPropertyType.value = it },
-                    maxPriceLakhs = maxPriceLakhs,
-                    onPriceChanged = { viewModel.maxPriceLakhs.value = it },
-                    minBedrooms = minBedrooms,
-                    onBedroomsSelected = { viewModel.minBedrooms.value = it },
-                    onFavoriteToggle = { property ->
-                        viewModel.toggleFavorite(property)
-                        val statusText = if (property.isFavorite) "အကြိုက်ဆုံးမှ ဖယ်ရှားလိုက်ပါပြီ" else "အကြိုက်ဆုံးစာရင်းသို့ ထည့်သွင်းလိုက်ပါပြီ"
-                        scope.launch { snackbarHostState.showSnackbar(statusText) }
-                    },
-                    onPropertyClick = { propertyId ->
-                        navController.navigate("detail/$propertyId")
-                    },
-                    onPostNewClick = {
-                        navController.navigate("post")
-                    },
-                    onResetFilters = {
-                        viewModel.resetFilters()
-                    },
-                    isSyncing = isSyncing,
-                    onRefreshSync = {
-                        viewModel.refreshCloudData { success ->
-                            scope.launch {
-                                val msg = if (success) "အချက်အလက်များကို Cloud database နှင့် ချိတ်ဆက် update လုပ်ပြီးပါပြီ" else "Cloud ချိတ်ဆက်မှု မအောင်မြင်ပါ။ နောက်မှ ပြန်လည် ကြိုးစားပါ။"
-                                snackbarHostState.showSnackbar(msg)
-                            }
-                        }
-                    },
-                    selectedTheme = currentTheme,
-                    onThemeSelected = { viewModel.setTheme(it) }
-                )
-            }
 
-            // 2. Property Detail Screen
-            composable(
-                route = "detail/{propertyId}",
-                arguments = listOf(navArgument("propertyId") { type = NavType.LongType })
-            ) { backStackEntry ->
-                val propId = backStackEntry.arguments?.getLong("propertyId") ?: 0L
-                val property by viewModel.getPropertyById(propId).collectAsStateWithLifecycle()
-
-                PropertyDetailScreen(
-                    property = property,
-                    onBackClick = { navController.popBackStack() },
-                    onFavoriteToggle = { prop ->
-                        viewModel.toggleFavorite(prop)
-                        val statusText = if (prop.isFavorite) "အကြိုက်ဆုံးမှ ဖယ်ရှားလိုက်ပါပြီ" else "အကြိုက်ဆုံးစာရင်းသို့ ထည့်သွင်းလိုက်ပါပြီ"
-                        scope.launch { snackbarHostState.showSnackbar(statusText) }
-                    },
-                    onCalculateLoanClick = { priceLakhs ->
-                        navController.navigate("calculator?price=$priceLakhs")
-                    },
-                    onEditClick = { prop ->
-                        navController.navigate("edit/${prop.id}")
-                    },
-                    onDeleteClick = { id ->
-                        viewModel.deleteProperty(id) {
-                            scope.launch { snackbarHostState.showSnackbar("ကြော်ငြာ ဖျက်လိုက်ပါပြီ။") }
-                            navController.popBackStack()
-                        }
-                    }
-                )
-            }
-
-            // 3. Post Listing Screen
-            composable("post") {
-                PostPropertyScreen(
-                    onBackClick = { navController.popBackStack() },
-                    onSubmitProperty = { title, listingType, propType, priceLakhs, pricePeriod, city, township, address, area, beds, baths, floor, furn, deed, desc, name, phone, imgRes ->
-                        viewModel.postNewProperty(
-                            title, listingType, propType, priceLakhs, pricePeriod, city, township, address, area, beds, baths, floor, furn, deed, desc, name, phone, imgRes
-                        ) {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("ကြော်ငြာ အောင်မြင်စွာ တင်ပြီးပါပြီ။")
-                            }
-                            navController.popBackStack()
-                        }
-                    }
-                )
-            }
-
-            // 3b. Edit Listing Screen
-            composable(
-                route = "edit/{propertyId}",
-                arguments = listOf(navArgument("propertyId") { type = NavType.LongType })
-            ) { backStackEntry ->
-                val propId = backStackEntry.arguments?.getLong("propertyId") ?: 0L
-                val property by viewModel.getPropertyById(propId).collectAsStateWithLifecycle()
-
-                PostPropertyScreen(
-                    onBackClick = { navController.popBackStack() },
-                    existingProperty = property,
-                    onUpdateProperty = { updated ->
-                        viewModel.updateProperty(updated) {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("ကြော်ငြာ ပြင်ဆင်ပြီးပါပြီ။")
-                            }
-                            navController.popBackStack()
-                        }
-                    },
-                    onSubmitProperty = { _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> }
-                )
-            }
-
-            // 4. Saved / Favorites Screen
-            composable("favorites") {
-                FavoritesScreen(
-                    favoriteProperties = favoriteProperties,
-                    onPropertyClick = { propertyId ->
-                        navController.navigate("detail/$propertyId")
-                    },
-                    onFavoriteToggle = { property ->
-                        viewModel.toggleFavorite(property)
-                        scope.launch { snackbarHostState.showSnackbar("အကြိုက်ဆုံးမှ ဖယ်ရှားလိုက်ပါပြီ") }
-                    }
-                )
-            }
-
-            // 5. Calculator Screen
-            composable(
-                route = "calculator?price={price}",
-                arguments = listOf(navArgument("price") {
-                    type = NavType.FloatType
-                    defaultValue = 3500f
-                })
-            ) { backStackEntry ->
-                val priceVal = backStackEntry.arguments?.getFloat("price") ?: 3500f
-                CalculatorScreen(initialPriceLakhs = priceVal.toDouble())
-            }
-
-            // 6. Agents Directory
-            composable("agents") {
-                AgentDirectoryScreen()
-            }
-        }
+        LoadingOverlay(isLoading = isLoading, message = loadingMessage)
     }
 }
 

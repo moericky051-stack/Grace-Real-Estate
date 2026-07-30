@@ -38,6 +38,9 @@ interface PropertyDao {
     @Query("DELETE FROM properties WHERE id = :id")
     suspend fun deleteProperty(id: Long)
 
+    @Query("SELECT * FROM properties WHERE docId = :docId LIMIT 1")
+    suspend fun getPropertyByDocId(docId: String): Property?
+
     @Query("SELECT COUNT(*) FROM properties")
     suspend fun getPropertyCount(): Int
 }

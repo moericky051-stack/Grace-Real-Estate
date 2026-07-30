@@ -20,6 +20,7 @@ val RealEstateGold = Color(0xFFF59E0B)
 val RealEstateGoldLight = Color(0xFFFDE68A)
 val RealEstateGreen = Color(0xFF10B981)
 val RealEstateBlue = Color(0xFF38BDF8)
+val RealEstateRed = Color(0xFFEF4444)
 val RealEstateBg = GeometricBg
 
 val DarkBackground = Color(0xFF0F172A)
