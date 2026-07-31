@@ -9,6 +9,7 @@ import com.example.data.model.Property
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,7 +35,8 @@ class PropertyRepository(
     private val _userProfile = MutableStateFlow<UserProfile?>(null)
     val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
 
-    private val externalScope = CoroutineScope(Dispatchers.IO)
+    // SupervisorJob ပါဝင်သောကြောင့် Child Coroutine Error တက်လျှင်လည်း Background Process မရပ်သွားပါ
+    private val externalScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
         // Start listening to Firebase Auth state
@@ -54,7 +56,7 @@ class PropertyRepository(
             }
         }
 
-        // Start Realtime Firestore Listener to sync Firestore properties -> Room DB
+        // Realtime Firestore Listener to sync Firestore properties -> Room DB
         externalScope.launch {
             try {
                 firebaseService.observeAllProperties()
@@ -82,6 +84,7 @@ class PropertyRepository(
                                         isFavorite = existing.isFavorite,
                                         docId = if (prop.docId.isNotBlank()) prop.docId else existing.docId
                                     )
+                                    // တကယ် အပြောင်းအလဲ ရှိမှသာ အသစ်ပြန်ထည့်မည် (UI Flicker မဖြစ်စေရန်)
                                     if (!isPropertyIdentical(existing, updatedProp)) {
                                         toBatchInsert.add(updatedProp)
                                     }
@@ -90,6 +93,7 @@ class PropertyRepository(
                                 }
                             }
 
+                            // အပြောင်းအလဲရှိသော Data သီးသန့်ကိုသာ Database သို့ Sync လုပ်မည်
                             if (toBatchInsert.isNotEmpty()) {
                                 propertyDao.insertProperties(toBatchInsert)
                             }
@@ -128,7 +132,7 @@ class PropertyRepository(
 
     fun getPropertyById(id: Long): Flow<Property?> = propertyDao.getPropertyById(id)
 
-    suspend fun toggleFavorite(id: Long, currentStatus: Boolean) {
+    suspend fun toggleFavorite(id: Long, currentStatus: Boolean) = withContext(Dispatchers.IO) {
         propertyDao.updateFavorite(id, !currentStatus)
     }
 
@@ -193,7 +197,7 @@ class PropertyRepository(
         }
     }
 
-    suspend fun checkAndSeedInitialData() {
+    suspend fun checkAndSeedInitialData() = withContext(Dispatchers.IO) {
         if (propertyDao.getPropertyCount() == 0) {
             val sampleProperties = listOf(
                 Property(
