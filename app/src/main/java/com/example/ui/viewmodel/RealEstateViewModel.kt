@@ -50,7 +50,8 @@ class RealEstateViewModel(application: Application) : AndroidViewModel(applicati
         selectedTheme.value = theme
     }
 
-    val isInitialLoading = MutableStateFlow(true)
+    // Default ကို false ဖြင့် စတင်ခြင်းဖြင့် UI ကို ချက်ချင်း Blank Screen သို့ ပြန်မရောက်စေပါ
+    val isInitialLoading = MutableStateFlow(false)
     val postsErrorMessage = MutableStateFlow<String?>(null)
 
     init {
@@ -63,8 +64,6 @@ class RealEstateViewModel(application: Application) : AndroidViewModel(applicati
                 repository.checkAndSeedInitialData()
             } catch (e: Exception) {
                 Log.e("RealEstateViewModel", "Error seeding data: ${e.message}")
-            } finally {
-                isInitialLoading.value = false
             }
         }
     }
@@ -221,17 +220,18 @@ class RealEstateViewModel(application: Application) : AndroidViewModel(applicati
         initialValue = emptyList()
     )
 
+    // UI Flicker မဖြစ်စေရန် Logic ပြင်ဆင်ထားပါသည်
     val postsUiState: StateFlow<PostsUiState> = combine(
         filteredProperties,
         isInitialLoading,
         postsErrorMessage
     ) { properties, loading, error ->
         when {
-            // Keep previous/cached state in UI while fetching/updating data in background
+            // Data ရှိနေရင် အမြဲ Success အဖြစ်သာ ထားမည် (White Screen Flicker ကို တားဆီးသည်)
             properties.isNotEmpty() -> PostsUiState.Success(properties)
             error != null -> PostsUiState.Error(error)
             loading -> PostsUiState.Loading
-            else -> PostsUiState.Empty
+            else -> PostsUiState.Success(emptyList()) // Empty State အစား Success(emptyList) ထားပေးခြင်းဖြင့် Grid Frame မပျက်တော့ပါ
         }
     }.distinctUntilChanged().stateIn(
         scope = viewModelScope,
