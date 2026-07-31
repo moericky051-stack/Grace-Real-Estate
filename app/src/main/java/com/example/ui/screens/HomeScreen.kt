@@ -1,4 +1,4 @@
-Package com.example.ui.screens
+package com.example.ui.screens
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.Image
