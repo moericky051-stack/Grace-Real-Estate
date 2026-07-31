@@ -319,14 +319,15 @@ fun HomeScreen(
                 }
             }
 
-            // Main Content Area (Property Feed in 2 Columns)
+            // Main Content Area
             val displayList = when (postsUiState) {
                 is PostsUiState.Success -> (postsUiState as PostsUiState.Success).properties
                 else -> properties
             }
 
-            // Subtle top progress bar when background fetching or syncing
-            if (isSyncing || (postsUiState is PostsUiState.Loading && displayList.isNotEmpty())) {
+            // Non-intrusive Top Indicator during background sync or loading
+            val isBackgroundLoading = isSyncing || (postsUiState is PostsUiState.Loading && displayList.isNotEmpty())
+            if (isBackgroundLoading) {
                 LinearProgressIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -336,6 +337,7 @@ fun HomeScreen(
                 )
             }
 
+            // 1. App စဖွင့်စ (Data လုံးဝ မရှိသေးသည့်အချိန်) တွင်မှ Full-screen Loading ကို ပြသမည်
             if (displayList.isEmpty() && postsUiState is PostsUiState.Loading) {
                 Box(
                     modifier = Modifier
@@ -349,7 +351,9 @@ fun HomeScreen(
                         Text("အချက်အလက်များ ရယူနေပါသည်...", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-            } else if (displayList.isEmpty() && postsUiState is PostsUiState.Error) {
+            } 
+            // 2. Data လုံးဝ မရှိဘဲ Error တက်ခဲ့လျှင် Error Screen ပြမည်
+            else if (displayList.isEmpty() && postsUiState is PostsUiState.Error) {
                 val errMsg = (postsUiState as PostsUiState.Error).message
                 Box(
                     modifier = Modifier
@@ -367,7 +371,9 @@ fun HomeScreen(
                         }
                     }
                 }
-            } else {
+            } 
+            // 3. List ထဲတွင် Data ရှိနေလျှင် UI အဟောင်းကို ငြိမ်ငြိမ်လေး ဆက်လက်ပြသပေးမည် (Flicker & White Screen ကို ကာကွယ်ပေးသည်)
+            else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     contentPadding = PaddingValues(8.dp),
@@ -375,7 +381,7 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // Header title & count (Spans both 2 columns)
+                    // Header title & count
                     item(span = { GridItemSpan(2) }) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -396,7 +402,7 @@ fun HomeScreen(
                         }
                     }
 
-                    // Empty state if no properties found
+                    // Filter ကြောင့် Data မရှိသည့် Empty state
                     if (displayList.isEmpty()) {
                         item(span = { GridItemSpan(2) }) {
                             Card(
@@ -440,6 +446,7 @@ fun HomeScreen(
                             }
                         }
                     } else {
+                        // Unique stable key များဖြင့် Render ပြုလုပ်ခြင်း
                         items(
                             items = displayList,
                             key = { property -> if (property.docId.isNotBlank()) property.docId else "local_${property.id}" }
