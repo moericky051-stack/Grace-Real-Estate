@@ -1,4 +1,4 @@
-package com.example.ui.screens
+Package com.example.ui.screens
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.Image
@@ -42,7 +42,6 @@ import com.example.ui.theme.RealEstateBlue
 import com.example.ui.theme.RealEstateGold
 import com.example.ui.theme.RealEstateGreen
 import com.example.ui.theme.RealEstateNavy
-
 import com.example.ui.viewmodel.PostsUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -299,7 +298,10 @@ fun HomeScreen(
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(cities) { (key, label) ->
+                    items(
+                        items = cities,
+                        key = { it.first }
+                    ) { (key, label) ->
                         val isSelected = selectedCity == key
                         FilterChip(
                             selected = isSelected,
@@ -319,10 +321,12 @@ fun HomeScreen(
                 }
             }
 
-            // Main Content Area
-            val displayList = when (postsUiState) {
-                is PostsUiState.Success -> (postsUiState as PostsUiState.Success).properties
-                else -> properties
+            // ✅ Fix 1: State ပြောင်းလဲချိန်တိုင်း Flicker မဖြစ်အောင် Data List ကို ငြိမ်နေစေရန် ရေးထားသည်
+            val displayList = remember(postsUiState, properties) {
+                when (postsUiState) {
+                    is PostsUiState.Success -> postsUiState.properties
+                    else -> properties
+                }
             }
 
             // Non-intrusive Top Indicator during background sync or loading
@@ -354,7 +358,7 @@ fun HomeScreen(
             } 
             // 2. Data လုံးဝ မရှိဘဲ Error တက်ခဲ့လျှင် Error Screen ပြမည်
             else if (displayList.isEmpty() && postsUiState is PostsUiState.Error) {
-                val errMsg = (postsUiState as PostsUiState.Error).message
+                val errMsg = postsUiState.message
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -372,7 +376,7 @@ fun HomeScreen(
                     }
                 }
             } 
-            // 3. List ထဲတွင် Data ရှိနေလျှင် UI အဟောင်းကို ငြိမ်ငြိမ်လေး ဆက်လက်ပြသပေးမည် (Flicker & White Screen ကို ကာကွယ်ပေးသည်)
+            // 3. List ထဲတွင် Data ရှိနေလျှင် UI အဟောင်းကို ငြိမ်ငြိမ်လေး ဆက်လက်ပြသပေးမည်
             else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
@@ -446,10 +450,12 @@ fun HomeScreen(
                             }
                         }
                     } else {
-                        // Unique stable key များဖြင့် Render ပြုလုပ်ခြင်း
+                        // ✅ Fix 2: Key ထပ်မနေစေရန်နှင့် Key တိကျစေရန် Local ID + DocID ပေါင်းစပ်ပေးထားသည်
                         items(
                             items = displayList,
-                            key = { property -> if (property.docId.isNotBlank()) property.docId else "local_${property.id}" }
+                            key = { property -> 
+                                if (property.docId.isNotBlank()) "doc_${property.docId}" else "id_${property.id}" 
+                            }
                         ) { property ->
                             PropertyCard(
                                 property = property,
