@@ -243,11 +243,25 @@ fun RealEstateApp(
                             scope.launch { snackbarHostState.showSnackbar("အကောင့်မှ ထွက်လိုက်ပါပြီ။") }
                         },
                         onEditProperty = { property ->
-                            navController.navigate("edit/${property.id}")
+                            if (viewModel.isUserSignedIn()) {
+                                navController.navigate("edit/${property.id}")
+                            } else {
+                                scope.launch { snackbarHostState.showSnackbar("Guest အကောင့်ဖြင့် ကြော်ငြာ ပြင်ဆင်ခွင့် မရှိပါ။") }
+                            }
                         },
                         onDeleteProperty = { propertyId ->
-                            viewModel.deleteProperty(propertyId) {
-                                scope.launch { snackbarHostState.showSnackbar("ကြော်ငြာ ဖျက်ပြီးပါပြီ။") }
+                            if (viewModel.isUserSignedIn()) {
+                                viewModel.deleteProperty(
+                                    propertyId = propertyId,
+                                    onSuccess = {
+                                        scope.launch { snackbarHostState.showSnackbar("ကြော်ငြာ ဖျက်ပြီးပါပြီ။") }
+                                    },
+                                    onError = { msg ->
+                                        scope.launch { snackbarHostState.showSnackbar(msg) }
+                                    }
+                                )
+                            } else {
+                                scope.launch { snackbarHostState.showSnackbar("Guest အကောင့်ဖြင့် ကြော်ငြာ ဖျက်ခွင့် မရှိပါ။") }
                             }
                         },
                         onOpenAuthClick = {
@@ -288,11 +302,25 @@ fun RealEstateApp(
                             navController.navigate("detail/$propertyId")
                         },
                         onEditProperty = { property ->
-                            navController.navigate("edit/${property.id}")
+                            if (viewModel.isUserSignedIn()) {
+                                navController.navigate("edit/${property.id}")
+                            } else {
+                                scope.launch { snackbarHostState.showSnackbar("Guest အကောင့်ဖြင့် ကြော်ငြာ ပြင်ဆင်ခွင့် မရှိပါ။") }
+                            }
                         },
                         onDeleteProperty = { propertyId ->
-                            viewModel.deleteProperty(propertyId) {
-                                scope.launch { snackbarHostState.showSnackbar("ကြော်ငြာ ဖျက်ပြီးပါပြီ။") }
+                            if (viewModel.isUserSignedIn()) {
+                                viewModel.deleteProperty(
+                                    propertyId = propertyId,
+                                    onSuccess = {
+                                        scope.launch { snackbarHostState.showSnackbar("ကြော်ငြာ ဖျက်ပြီးပါပြီ။") }
+                                    },
+                                    onError = { msg ->
+                                        scope.launch { snackbarHostState.showSnackbar(msg) }
+                                    }
+                                )
+                            } else {
+                                scope.launch { snackbarHostState.showSnackbar("Guest အကောင့်ဖြင့် ကြော်ငြာ ဖျက်ခွင့် မရှိပါ။") }
                             }
                         }
                     )
@@ -305,6 +333,7 @@ fun RealEstateApp(
                 ) { backStackEntry ->
                     val propId = backStackEntry.arguments?.getLong("propertyId") ?: 0L
                     val property by viewModel.getPropertyById(propId).collectAsStateWithLifecycle()
+                    val canEditOrDelete = viewModel.isUserSignedIn()
 
                     PropertyDetailScreen(
                         property = property,
@@ -317,15 +346,21 @@ fun RealEstateApp(
                         onCalculateLoanClick = { priceLakhs ->
                             navController.navigate("calculator?price=$priceLakhs")
                         },
-                        onEditClick = { prop ->
+                        onEditClick = if (canEditOrDelete) { prop ->
                             navController.navigate("edit/${prop.id}")
-                        },
-                        onDeleteClick = { id ->
-                            viewModel.deleteProperty(id) {
-                                scope.launch { snackbarHostState.showSnackbar("ကြော်ငြာ ဖျက်လိုက်ပါပြီ။") }
-                                navController.popBackStack()
-                            }
-                        }
+                        } else null,
+                        onDeleteClick = if (canEditOrDelete) { id ->
+                            viewModel.deleteProperty(
+                                propertyId = id,
+                                onSuccess = {
+                                    scope.launch { snackbarHostState.showSnackbar("ကြော်ငြာ ဖျက်လိုက်ပါပြီ။") }
+                                    navController.popBackStack()
+                                },
+                                onError = { msg ->
+                                    scope.launch { snackbarHostState.showSnackbar(msg) }
+                                }
+                            )
+                        } else null
                     )
                 }
 
@@ -365,20 +400,36 @@ fun RealEstateApp(
                 ) { backStackEntry ->
                     val propId = backStackEntry.arguments?.getLong("propertyId") ?: 0L
                     val property by viewModel.getPropertyById(propId).collectAsStateWithLifecycle()
+                    val isSignedIn = viewModel.isUserSignedIn()
 
-                    PostPropertyScreen(
-                        onBackClick = { navController.popBackStack() },
-                        existingProperty = property,
-                        onUpdateProperty = { updated ->
-                            viewModel.updateProperty(updated) {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("ကြော်ငြာ ပြင်ဆင်ပြီးပါပြီ။")
-                                }
-                                navController.popBackStack()
+                    if (!isSignedIn) {
+                        LaunchedEffect(Unit) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Guest အကောင့်ဖြင့် ကြော်ငြာ ပြင်ဆင်ပိုင်ခွင့် မရှိပါ။ အကောင့်ဝင်ရောက်ပါ။")
                             }
-                        },
-                        onSubmitProperty = { _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> }
-                    )
+                            navController.popBackStack()
+                        }
+                    } else {
+                        PostPropertyScreen(
+                            onBackClick = { navController.popBackStack() },
+                            existingProperty = property,
+                            onUpdateProperty = { updated ->
+                                viewModel.updateProperty(
+                                    property = updated,
+                                    onSuccess = {
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar("ကြော်ငြာ ပြင်ဆင်ပြီးပါပြီ။")
+                                        }
+                                        navController.popBackStack()
+                                    },
+                                    onError = { msg ->
+                                        scope.launch { snackbarHostState.showSnackbar(msg) }
+                                    }
+                                )
+                            },
+                            onSubmitProperty = { _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> }
+                        )
+                    }
                 }
 
                 // 4. Saved / Favorites Screen

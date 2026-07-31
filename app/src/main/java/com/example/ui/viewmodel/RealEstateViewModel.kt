@@ -341,8 +341,13 @@ class RealEstateViewModel(application: Application) : AndroidViewModel(applicati
 
     fun updateProperty(
         property: Property,
-        onSuccess: () -> Unit
+        onSuccess: () -> Unit,
+        onError: ((String) -> Unit)? = null
     ) {
+        if (!isUserSignedIn()) {
+            onError?.invoke("Guest အကောင့်ဖြင့် ကြော်ငြာ ပြင်ဆင်ပိုင်ခွင့် မရှိပါ။ အကောင့်ဝင်ရောက်ပါ။")
+            return
+        }
         viewModelScope.launch {
             isLoading.value = true
             loadingMessage.value = "Firestore နှင့် Storage တွင် ပြင်ဆင်နေပါသည်..."
@@ -362,8 +367,13 @@ class RealEstateViewModel(application: Application) : AndroidViewModel(applicati
 
     fun deleteProperty(
         propertyId: Long,
-        onSuccess: () -> Unit
+        onSuccess: () -> Unit,
+        onError: ((String) -> Unit)? = null
     ) {
+        if (!isUserSignedIn()) {
+            onError?.invoke("Guest အကောင့်ဖြင့် ကြော်ငြာ ဖျက်ပိုင်ခွင့် မရှိပါ။ အကောင့်ဝင်ရောက်ပါ။")
+            return
+        }
         viewModelScope.launch {
             isLoading.value = true
             loadingMessage.value = "Firebase မှ ဖျက်သိမ်းနေပါသည်..."
