@@ -1,12 +1,20 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import coil.compose.AsyncImage
+import androidx.compose.ui.unit.dp
+import coil.compose.SubcomposeAsyncImage
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import com.example.R
 import java.io.File
 
@@ -19,22 +27,20 @@ fun PropertyImage(
 ) {
     val context = LocalContext.current
 
+    // 1. Path/Name ခွဲထုတ်ခြင်း
     val imageModel: Any = remember(imageResName) {
-        // 1. ကော်မာပါရင် ပထမဆုံး လမ်းကြောင်းကို ယူမည်
         val primaryPath = if (imageResName.contains(",")) {
             imageResName.split(",").firstOrNull { it.isNotBlank() }?.trim() ?: imageResName
         } else {
             imageResName
         }
 
-        // 2. Type အလိုက် Model ခွဲခြားမည်
         when {
             primaryPath.startsWith("/") -> File(primaryPath)
             primaryPath.startsWith("file://") ||
             primaryPath.startsWith("content://") ||
             primaryPath.startsWith("http") -> primaryPath
             else -> {
-                // Extension များ ပါလာပါက ဖျက်ထုတ်မည် (ဥပမာ .jpg, .png)
                 val cleanName = primaryPath.substringBeforeLast(".")
                 val resId = context.resources.getIdentifier(cleanName, "drawable", context.packageName)
                 if (resId != 0) resId else R.drawable.img_hero_banner
@@ -42,12 +48,37 @@ fun PropertyImage(
         }
     }
 
-    AsyncImage(
-        model = imageModel,
+    // 2. Coil Request တွင် Cache Enable လုပ်ခြင်း
+    val imageRequest = remember(imageModel) {
+        ImageRequest.Builder(context)
+            .data(imageModel)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .crossfade(true)
+            .build()
+    }
+
+    // 3. Smooth Loading ဖြစ်စေရန် SubcomposeAsyncImage သုံးခြင်း
+    SubcomposeAsyncImage(
+        model = imageRequest,
         contentDescription = contentDescription,
         contentScale = contentScale,
         modifier = modifier,
-        error = painterResource(id = R.drawable.img_hero_banner),
-        placeholder = painterResource(id = R.drawable.img_hero_banner)
+        loading = {
+            Box(
+                modifier = modifier,
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            }
+        },
+        error = {
+            Image(
+                painter = painterResource(id = R.drawable.img_hero_banner),
+                contentDescription = contentDescription,
+                contentScale = contentScale,
+                modifier = modifier
+            )
+        }
     )
 }
