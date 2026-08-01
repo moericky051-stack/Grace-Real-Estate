@@ -1,4 +1,4 @@
-package com.example.ui.components
+package com.aistudio.realestate.shwehouse.edeaff.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
-import com.example.R
+import com.aistudio.realestate.shwehouse.edeaff.R
 import java.io.File
 
 @Composable
