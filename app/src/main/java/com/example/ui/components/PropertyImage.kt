@@ -8,6 +8,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
 import com.example.R
+import java.io.File
 
 @Composable
 fun PropertyImage(
@@ -17,22 +18,25 @@ fun PropertyImage(
     contentScale: ContentScale = ContentScale.Crop
 ) {
     val context = LocalContext.current
-    val primaryPath = remember(imageResName) {
-        if (imageResName.contains(",")) {
+
+    val imageModel: Any = remember(imageResName) {
+        // 1. ကော်မာပါရင် ပထမဆုံး လမ်းကြောင်းကို ယူမည်
+        val primaryPath = if (imageResName.contains(",")) {
             imageResName.split(",").firstOrNull { it.isNotBlank() }?.trim() ?: imageResName
         } else {
             imageResName
         }
-    }
 
-    val imageModel: Any = remember(primaryPath) {
+        // 2. Type အလိုက် Model ခွဲခြားမည်
         when {
-            primaryPath.startsWith("/") -> java.io.File(primaryPath)
+            primaryPath.startsWith("/") -> File(primaryPath)
             primaryPath.startsWith("file://") ||
             primaryPath.startsWith("content://") ||
             primaryPath.startsWith("http") -> primaryPath
             else -> {
-                val resId = context.resources.getIdentifier(primaryPath, "drawable", context.packageName)
+                // Extension များ ပါလာပါက ဖျက်ထုတ်မည် (ဥပမာ .jpg, .png)
+                val cleanName = primaryPath.substringBeforeLast(".")
+                val resId = context.resources.getIdentifier(cleanName, "drawable", context.packageName)
                 if (resId != 0) resId else R.drawable.img_hero_banner
             }
         }
