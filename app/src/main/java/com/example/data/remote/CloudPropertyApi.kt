@@ -39,7 +39,10 @@ interface CloudPropertyApi {
     ): Response<CloudPropertyDto>
 }
 
-// 3. Retrofit Builder / Provider
+// 3. BASE_URL ကြေညာထားခြင်း (အကယ်၍ တခြား file မှာ မရှိသေးပါက ဒီမှာ သုံးပါမည်)
+private const val BASE_URL = "https://your-api-base-url.com/" 
+
+// 4. Retrofit Builder / Provider
 object CloudPropertyApiProvider {
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
@@ -58,13 +61,12 @@ object CloudPropertyApiProvider {
         .addLast(KotlinJsonAdapterFactory())
         .build()
 
-    private val retrofit = Retrofit.Builder()
-        .baseUrl("https://your-api-base-url.com/") // သင့်ရဲ့ Server Base URL ထည့်ပါ
-        .client(okHttpClient) // Timeout ပြင်ထားသည့် OkHttpClient ကို ထည့်သွင်းပေးခြင်း
-        .addConverterFactory(MoshiConverterFactory.create(moshi))
-        .build()
-
     val api: CloudPropertyApi by lazy {
-        retrofit.create(CloudPropertyApi::class.java)
+        Retrofit.Builder()
+            .baseUrl(BASE_URL) // သင့် Project ရဲ့ BASE_URL ကို တိုက်ရိုက် သုံးထားပါသည်
+            .client(okHttpClient) // Timeout ပြင်ထားသည့် OkHttpClient ကို ထည့်သွင်းပေးခြင်း
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(CloudPropertyApi::class.java)
     }
 }
