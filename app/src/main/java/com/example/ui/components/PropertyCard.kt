@@ -1,7 +1,5 @@
-package
-import com.aistudio.realestate.shwehouse.edeaff.ui.components.PropertyImage
-
 package com.example.ui.components
+import com.aistudio.realestate.shwehouse.edeaff.ui.components.PropertyImage
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
