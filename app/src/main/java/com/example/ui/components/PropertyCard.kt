@@ -1,5 +1,4 @@
-package com.example.ui.components
-import com.aistudio.realestate.shwehouse.edeaff.ui.components.PropertyImage
+package com.aistudio.realestate.shwehouse.edeaff.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,212 +13,156 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.model.Property
-import com.example.ui.theme.RealEstateBlue
-import com.example.ui.theme.RealEstateGold
-import com.example.ui.theme.RealEstateGreen
-import com.example.ui.theme.RealEstateNavy
 
 @Composable
 fun PropertyCard(
-    property: Property,
-    onCardClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
-    modifier: Modifier = Modifier
+    title: String,
+    price: String,
+    location: String,
+    imageResName: String,
+    bedrooms: Int? = null,
+    bathrooms: Int? = null,
+    areaSqft: Double? = null,
+    listingType: String = "BUY",
+    isFavorite: Boolean = false,
+    onCardClick: () -> Unit = {},
+    onFavoriteClick: () -> Unit = {}
 ) {
-    val isRent = property.listingType == "RENT"
-
     Card(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
             .clickable { onCardClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            // Image Box with Badges & Favorite Button
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(125.dp)
+                    .height(180.dp)
             ) {
+                // 1. Property Image
                 PropertyImage(
-                    imageResName = property.imageResName,
-                    contentDescription = property.title,
-                    contentScale = ContentScale.Crop,
+                    imageResName = imageResName,
+                    contentDescription = title,
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Top Gradient overlay for better contrast
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent, Color.Black.copy(alpha = 0.45f))
-                            )
-                        )
-                )
-
-                // Listing Type Tag Badge (BUY / RENT)
+                // 2. Listing Type Badge (ငှားရန် / ရောင်းရန်)
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isRent) RealEstateBlue else RealEstateGreen,
                     modifier = Modifier
-                        .padding(6.dp)
-                        .align(Alignment.TopStart)
+                        .padding(12.dp)
+                        .align(Alignment.TopStart),
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (listingType == "RENT") Color(0xFF0288D1) else Color(0xFF388E3C)
                 ) {
                     Text(
-                        text = if (isRent) "ငှားရန်" else "ဝယ်ရန်",
+                        text = if (listingType == "RENT") "ငှားရန်" else "ရောင်းရန်",
                         color = Color.White,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
 
-                // Favorite Toggle Button
+                // 3. Favorite Icon Button
                 IconButton(
                     onClick = onFavoriteClick,
                     modifier = Modifier
-                        .padding(6.dp)
+                        .padding(12.dp)
+                        .size(36.dp)
+                        .background(Color.White.copy(alpha = 0.8f), CircleShape)
                         .align(Alignment.TopEnd)
-                        .size(28.dp)
-                        .background(Color.White.copy(alpha = 0.92f), CircleShape)
                 ) {
                     Icon(
-                        imageVector = if (property.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = "Favorite",
-                        tint = if (property.isFavorite) Color.Red else Color.Gray,
-                        modifier = Modifier.size(15.dp)
+                        tint = if (isFavorite) Color.Red else Color.Gray
                     )
-                }
-
-                // Price Tag overlay at bottom left of image
-                Surface(
-                    shape = RoundedCornerShape(topEnd = 8.dp),
-                    color = RealEstateNavy.copy(alpha = 0.92f),
-                    modifier = Modifier.align(Alignment.BottomStart)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (property.priceLakhs >= 1000) {
-                                String.format("%.1f", property.priceLakhs / 1000.0) + " သောင်း"
-                            } else {
-                                "${property.priceLakhs.toInt()} သိန်း"
-                            },
-                            color = RealEstateGold,
-                            fontSize = 12.5.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                        if (isRent) {
-                            Text(
-                                text = " / လ",
-                                color = Color.White.copy(alpha = 0.85f),
-                                fontSize = 9.sp
-                            )
-                        }
-                    }
                 }
             }
 
-            // Details Content Area
+            // 4. Details Section
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
+                modifier = Modifier.padding(16.dp)
             ) {
                 Text(
-                    text = property.title,
-                    fontSize = 11.5.sp,
+                    text = price,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    lineHeight = 15.sp,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.primary
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Location row
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(
-                        imageVector = Icons.Filled.LocationOn,
-                        contentDescription = "Location",
-                        tint = RealEstateGold,
-                        modifier = Modifier.size(12.dp)
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color.Gray
                     )
-                    Spacer(modifier = Modifier.width(3.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${property.township}, ${property.city}",
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        text = location,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Property Specs Row (Area, Beds, Baths)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SpecChip(
-                        icon = Icons.Filled.SquareFoot,
-                        label = "${property.areaSqft} sqft"
-                    )
-                    if (property.bedrooms > 0) {
-                        SpecChip(
-                            icon = Icons.Filled.Bed,
-                            label = "${property.bedrooms} ခန်း"
-                        )
-                    }
-                    if (property.bathrooms > 0) {
-                        SpecChip(
-                            icon = Icons.Filled.Bathtub,
-                            label = "${property.bathrooms} ရေ"
-                        )
+                // Specs (Bedrooms, Bathrooms, Sqft)
+                if (bedrooms != null || bathrooms != null || areaSqft != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        bedrooms?.let {
+                            Text(
+                                text = "$it ရေချိုးခန်း/အိပ်ခန်း",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
+                            )
+                        }
+                        bathrooms?.let {
+                            Text(
+                                text = "$it ရေချိုးခန်း",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
+                            )
+                        }
+                        areaSqft?.let {
+                            Text(
+                                text = "$it sqft",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
-
-@Composable
-private fun SpecChip(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
-            modifier = Modifier.size(11.dp)
-        )
-        Spacer(modifier = Modifier.width(2.dp))
-        Text(
-            text = label,
-            fontSize = 9.5.sp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
