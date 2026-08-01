@@ -1,3 +1,5 @@
+package com.example.ui.components
+
 package com.aistudio.realestate.shwehouse.edeaff.ui.components
 
 import androidx.compose.foundation.Image
