@@ -1,3 +1,4 @@
+package
 import com.aistudio.realestate.shwehouse.edeaff.ui.components.PropertyImage
 
 package com.example.ui.components
