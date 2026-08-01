@@ -1,5 +1,3 @@
-package com.example.ui.components
-
 package com.aistudio.realestate.shwehouse.edeaff.ui.components
 
 import androidx.compose.foundation.Image
@@ -29,7 +27,7 @@ fun PropertyImage(
 ) {
     val context = LocalContext.current
 
-    // 1. Path/Name ခွဲထုတ်ခြင်း
+    // 1. Path/Name ခွဲထုတ်ခြင်း (getIdentifier အကြိမ်ကြိမ် မခေါ်အောင် remember သုံးထားသည်)
     val imageModel: Any = remember(imageResName) {
         val primaryPath = if (imageResName.contains(",")) {
             imageResName.split(",").firstOrNull { it.isNotBlank() }?.trim() ?: imageResName
@@ -50,7 +48,7 @@ fun PropertyImage(
         }
     }
 
-    // 2. Coil Request တွင် Cache Enable လုပ်ခြင်း
+    // 2. Coil Request တွင် Cache ဖွင့်လှစ်ခြင်း
     val imageRequest = remember(imageModel) {
         ImageRequest.Builder(context)
             .data(imageModel)
@@ -60,7 +58,7 @@ fun PropertyImage(
             .build()
     }
 
-    // 3. Smooth Loading ဖြစ်စေရန် SubcomposeAsyncImage သုံးခြင်း
+    // 3. SubcomposeAsyncImage ဖြင့် Loading မလှုပ်ဘဲ Smooth ဖြစ်အောင် ပြသပေးခြင်း
     SubcomposeAsyncImage(
         model = imageRequest,
         contentDescription = contentDescription,
