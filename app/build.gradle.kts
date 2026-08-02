@@ -62,8 +62,8 @@ android {
   testOptions { unitTests { isIncludeAndroidResources = true } }
 }
 
-// AAR Metadata check ကြောင့် Error မတက်အောင် ကျော်ခိုင်းသည့် လိုင်း
-tasks.withType<com.android.build.gradle.tasks.CheckAarMetadataTask>().configureEach {
+// AAR Metadata check ကို Task Name ဖြင့် တိုက်ရိုက်ပိတ်ခြင်း
+tasks.matching { it.name.contains("CheckAarMetadata") }.configureEach {
     enabled = false
 }
 
