@@ -163,7 +163,13 @@ fun HomeScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             // Firebase Profile Button
                             IconButton(
-                                onClick = onOpenAuthClick,
+                                onClick = {
+                                    if (onOpenAuthClick != {}) {
+                                        onOpenAuthClick()
+                                    } else {
+                                        isProfileSheetOpen = true
+                                    }
+                                },
                                 modifier = Modifier
                                     .background(Color.White.copy(alpha = 0.15f), CircleShape)
                                     .size(32.dp)
@@ -321,7 +327,7 @@ fun HomeScreen(
                 }
             }
 
-            // ✅ Fix 1: State ပြောင်းလဲချိန်တိုင်း Flicker မဖြစ်အောင် Data List ကို ငြိမ်နေစေရန် ရေးထားသည်
+            // Data List Stabilizer to prevent flicker during background sync
             val displayList = remember(postsUiState, properties) {
                 when (postsUiState) {
                     is PostsUiState.Success -> postsUiState.properties
@@ -376,7 +382,7 @@ fun HomeScreen(
                     }
                 }
             } 
-            // 3. List ထဲတွင် Data ရှိနေလျှင် UI အဟောင်းကို ငြိမ်ငြိမ်လေး ဆက်လက်ပြသပေးမည်
+            // 3. List ထဲတွင် Data ရှိနေလျှင် UI ကို ငြိမ်ငြိမ်လေး ပြသပေးမည်
             else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
@@ -450,7 +456,7 @@ fun HomeScreen(
                             }
                         }
                     } else {
-                        // ✅ Fix 2: Key ထပ်မနေစေရန်နှင့် Key တိကျစေရန် Local ID + DocID ပေါင်းစပ်ပေးထားသည်
+                        // Key ကို docId နဲ့ id ပေါင်းစပ်၍ ထူးခြားစေပြီး Flicker မဖြစ်အောင် ပြုလုပ်ထားသည်
                         items(
                             items = displayList,
                             key = { property -> 
@@ -517,7 +523,7 @@ fun HomeScreen(
             title = { Text("အပလီကေးရှင်း အရောင် Theme ရွေးချယ်ရန်", fontWeight = FontWeight.Bold, fontSize = 16.sp) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AppThemeOption.values().forEach { theme ->
+                    AppThemeOption.entries.forEach { theme ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
