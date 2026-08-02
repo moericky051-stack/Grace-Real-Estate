@@ -1,19 +1,11 @@
 package com.example.ui.components
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
-import coil.compose.SubcomposeAsyncImage
+import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.aistudio.realestate.shwehouse.edeaff.R
@@ -28,58 +20,49 @@ fun PropertyImage(
 ) {
     val context = LocalContext.current
 
-    // 1. Path/Name ခွဲထုတ်ခြင်း (getIdentifier အကြိမ်ကြိမ် မခေါ်အောင် remember သုံးထားသည်)
-    val imageModel: Any = remember(imageResName) {
-        val primaryPath = if (imageResName.contains(",")) {
-            imageResName.split(",").firstOrNull { it.isNotBlank() }?.trim() ?: imageResName
-        } else {
-            imageResName
-        }
+    val imageModel = remember(imageResName) {
+        val path = imageResName
+            .split(",")
+            .firstOrNull()
+            ?.trim()
+            ?: ""
 
         when {
-            primaryPath.startsWith("/") -> File(primaryPath)
-            primaryPath.startsWith("file://") ||
-            primaryPath.startsWith("content://") ||
-            primaryPath.startsWith("http") -> primaryPath
+            path.startsWith("/") -> File(path)
+
+            path.startsWith("http://") ||
+            path.startsWith("https://") ||
+            path.startsWith("content://") ||
+            path.startsWith("file://") -> path
+
             else -> {
-                val cleanName = primaryPath.substringBeforeLast(".")
-                val resId = context.resources.getIdentifier(cleanName, "drawable", context.packageName)
-                if (resId != 0) resId else R.drawable.img_hero_banner
+                val resId = context.resources.getIdentifier(
+                    path.substringBeforeLast("."),
+                    "drawable",
+                    context.packageName
+                )
+
+                if (resId != 0) resId
+                else R.drawable.img_hero_banner
             }
         }
     }
 
-    // 2. Coil Request တွင် Cache ဖွင့်လှစ်ခြင်း
-    val imageRequest = remember(imageModel) {
+    val request = remember(imageModel) {
         ImageRequest.Builder(context)
             .data(imageModel)
             .memoryCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.ENABLED)
-            .crossfade(true)
+            .crossfade(false)
             .build()
     }
 
-    // 3. SubcomposeAsyncImage ဖြင့် Loading မလှုပ်ဘဲ Smooth ဖြစ်အောင် ပြသပေးခြင်း
-    SubcomposeAsyncImage(
-        model = imageRequest,
+    AsyncImage(
+        model = request,
         contentDescription = contentDescription,
-        contentScale = contentScale,
         modifier = modifier,
-        loading = {
-            Box(
-                modifier = modifier,
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-            }
-        },
-        error = {
-            Image(
-                painter = painterResource(id = R.drawable.img_hero_banner),
-                contentDescription = contentDescription,
-                contentScale = contentScale,
-                modifier = modifier
-            )
-        }
+        contentScale = contentScale,
+        error = androidx.compose.ui.res.painterResource(R.drawable.img_hero_banner),
+        placeholder = androidx.compose.ui.res.painterResource(R.drawable.img_hero_banner)
     )
 }
