@@ -6,18 +6,15 @@ import com.example.data.db.PropertyDao
 import com.example.data.firebase.FirebaseService
 import com.example.data.firebase.UserProfile
 import com.example.data.model.Property
-import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -28,14 +25,13 @@ class PropertyRepository(
 
     val firebaseService = FirebaseService(context)
 
-    // Room DB Flow for offline access
+    // Room DB Flow for offline access (distinctUntilChanged ဖြင့် UI တူညီပါက Re-render မလုပ်ရန် တားဆီးထားပါသည်)
     val allProperties: Flow<List<Property>> = propertyDao.getAllProperties().distinctUntilChanged()
-    val favoriteProperties: Flow<List<Property>> = propertyDao.getFavoriteProperties()
+    val favoriteProperties: Flow<List<Property>> = propertyDao.getFavoriteProperties().distinctUntilChanged()
 
     private val _userProfile = MutableStateFlow<UserProfile?>(null)
     val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
 
-    // SupervisorJob ပါဝင်သောကြောင့် Child Coroutine Error တက်လျှင်လည်း Background Process မရပ်သွားပါ
     private val externalScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
@@ -56,7 +52,7 @@ class PropertyRepository(
             }
         }
 
-        // Realtime Firestore Listener to sync Firestore properties -> Room DB
+        // Realtime Firestore Listener -> Sync to Room DB
         externalScope.launch {
             try {
                 firebaseService.observeAllProperties()
@@ -70,22 +66,22 @@ class PropertyRepository(
                             val toBatchInsert = mutableListOf<Property>()
 
                             for (prop in firestoreList) {
-                                var existing: Property? = if (prop.docId.isNotBlank()) {
+                                val existing = if (prop.docId.isNotBlank()) {
                                     existingDocMap[prop.docId]
-                                } else null
-
-                                if (existing == null) {
-                                    existing = existingTitlePhoneMap["${prop.title}_${prop.agentPhone}"]
+                                } else {
+                                    existingTitlePhoneMap["${prop.title}_${prop.agentPhone}"]
                                 }
 
                                 if (existing != null) {
+                                    // Local တန်ဖိုးဖြစ်သည့် id, isFavorite တို့ကို ထိန်းထားပါမည်
                                     val updatedProp = prop.copy(
                                         id = existing.id,
                                         isFavorite = existing.isFavorite,
                                         docId = if (prop.docId.isNotBlank()) prop.docId else existing.docId
                                     )
-                                    // တကယ် အပြောင်းအလဲ ရှိမှသာ အသစ်ပြန်ထည့်မည် (UI Flicker မဖြစ်စေရန်)
-                                    if (!isPropertyIdentical(existing, updatedProp)) {
+                                    
+                                    // Kotlin Data Class ရဲ့ == (equals) ကိုသုံးပြီး တကယ်ပြောင်းလဲမှုရှိမှ Insert လုပ်မည်
+                                    if (existing != updatedProp) {
                                         toBatchInsert.add(updatedProp)
                                     }
                                 } else {
@@ -93,7 +89,7 @@ class PropertyRepository(
                                 }
                             }
 
-                            // အပြောင်းအလဲရှိသော Data သီးသန့်ကိုသာ Database သို့ Sync လုပ်မည်
+                            // တကယ်ပြောင်းလဲသွားသော data များရှိမှသာ Room DB သို့ အသစ်ပြန်ထည့်မည်
                             if (toBatchInsert.isNotEmpty()) {
                                 propertyDao.insertProperties(toBatchInsert)
                             }
@@ -105,32 +101,7 @@ class PropertyRepository(
         }
     }
 
-    private fun isPropertyIdentical(p1: Property, p2: Property): Boolean {
-        return p1.id == p2.id &&
-               p1.title == p2.title &&
-               p1.listingType == p2.listingType &&
-               p1.propertyType == p2.propertyType &&
-               p1.priceLakhs == p2.priceLakhs &&
-               p1.pricePeriod == p2.pricePeriod &&
-               p1.city == p2.city &&
-               p1.township == p2.township &&
-               p1.address == p2.address &&
-               p1.areaSqft == p2.areaSqft &&
-               p1.bedrooms == p2.bedrooms &&
-               p1.bathrooms == p2.bathrooms &&
-               p1.floorLevel == p2.floorLevel &&
-               p1.furnishing == p2.furnishing &&
-               p1.deedType == p2.deedType &&
-               p1.description == p2.description &&
-               p1.agentName == p2.agentName &&
-               p1.agentPhone == p2.agentPhone &&
-               p1.imageResName == p2.imageResName &&
-               p1.isFavorite == p2.isFavorite &&
-               p1.userId == p2.userId &&
-               p1.docId == p2.docId
-    }
-
-    fun getPropertyById(id: Long): Flow<Property?> = propertyDao.getPropertyById(id)
+    fun getPropertyById(id: Long): Flow<Property?> = propertyDao.getPropertyById(id).distinctUntilChanged()
 
     suspend fun toggleFavorite(id: Long, currentStatus: Boolean) = withContext(Dispatchers.IO) {
         propertyDao.updateFavorite(id, !currentStatus)
@@ -141,11 +112,9 @@ class PropertyRepository(
         selectedImagePaths: List<String>
     ): Result<Long> = withContext(Dispatchers.IO) {
         try {
-            // Upload images to Storage & save doc to Firestore
             val firestoreResult = firebaseService.addPropertyToFirestore(property, selectedImagePaths)
             val docId = firestoreResult.getOrDefault("")
 
-            // Insert locally in Room DB
             val finalProp = property.copy(
                 docId = docId,
                 userId = firebaseService.currentUserId,
@@ -156,7 +125,6 @@ class PropertyRepository(
             Result.success(localId)
         } catch (e: Exception) {
             Log.e("PropertyRepository", "insertPropertyWithFirebase error: ${e.message}")
-            // Fallback: save locally
             val localId = propertyDao.insertProperty(property)
             Result.success(localId)
         }
