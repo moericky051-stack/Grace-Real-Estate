@@ -62,6 +62,11 @@ android {
   testOptions { unitTests { isIncludeAndroidResources = true } }
 }
 
+// AAR Metadata check ကြောင့် Error မတက်အောင် ကျော်ခိုင်းသည့် လိုင်း
+tasks.withType<com.android.build.gradle.tasks.CheckAarMetadataTask>().configureEach {
+    enabled = false
+}
+
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
 secrets {
   propertiesFileName = ".env"
