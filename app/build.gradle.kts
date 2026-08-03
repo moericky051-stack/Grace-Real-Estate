@@ -50,14 +50,18 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
         debug {
-            // Android Default Debug Signing ကို သုံးပါသည်
             signingConfig = signingConfigs.getByName("debug")
         }
     }
 
+    // JVM Target များကို Java 17 ဖြင့် တညီတညွတ်တည်း ညှိပေးထားပါသည်
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 
     buildFeatures {
