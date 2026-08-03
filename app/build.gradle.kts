@@ -5,19 +5,8 @@ plugins {
   id("org.jetbrains.kotlin.android")
   id("com.google.devtools.ksp")
   alias(libs.plugins.roborazzi)
-  alias(libs.plugins.secrets)
   id("com.google.gms.google-services")
-}
-
-// Google Services Strategy Configuration
-googleServices { 
-  missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN 
-}
-
-// Secrets Plugin Configuration
-secrets {
-  propertiesFileName = ".env"
-  defaultPropertiesFileName = ".env.example"
+  alias(libs.plugins.secrets)
 }
 
 android {
@@ -77,6 +66,16 @@ android {
   testOptions { unitTests { isIncludeAndroidResources = true } }
 }
 
+// Configuration options
+googleServices { 
+  missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN 
+}
+
+secrets {
+  propertiesFileName = ".env"
+  defaultPropertiesFileName = ".env.example"
+}
+
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
@@ -88,7 +87,7 @@ dependencies {
   implementation(libs.androidx.compose.ui.graphics)
   implementation(libs.androidx.compose.ui.tooling.preview)
   
-  // AGP Mismatch ရှောင်ရှားရန် core-ktx 1.15.0 ကို အသုံးပြုထားပါသည်
+  // core-ktx ကို AGP နှင့် ကိုက်ညီအောင် 1.15.0 ထားပေးထားပါသည်
   implementation("androidx.core:core-ktx:1.15.0")
   
   implementation(libs.androidx.lifecycle.runtime.compose)
