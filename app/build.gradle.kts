@@ -11,12 +11,12 @@ plugins {
 
 android {
   namespace = "com.example"
-  compileSdk = 35
+  compileSdk = 34
 
   defaultConfig {
     applicationId = "com.aistudio.realestate.shwehouse.edeaff"
     minSdk = 24
-    targetSdk = 35
+    targetSdk = 34
     versionCode = 1
     versionName = "1.0"
 
