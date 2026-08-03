@@ -7,8 +7,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -34,7 +32,6 @@ import com.example.ui.components.LoadingOverlay
 import com.example.ui.screens.*
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.RealEstateGold
-import com.example.ui.theme.RealEstateNavy
 import com.example.ui.viewmodel.RealEstateViewModel
 import kotlinx.coroutines.launch
 
@@ -81,12 +78,14 @@ fun RealEstateApp(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val bottomNavItems = listOf(
-        BottomNavItem("home", "ရှာဖွေမည်", Icons.Filled.Home, Icons.Outlined.Home),
-        BottomNavItem("favorites", "သိမ်းဆည်းထားသော", Icons.Filled.Bookmark, Icons.Outlined.BookmarkBorder, badgeCount = favoriteProperties.size),
-        BottomNavItem("calculator", "တွက်ချက်စက်", Icons.Filled.Calculate, Icons.Outlined.Calculate),
-        BottomNavItem("agents", "အကျိုးဆောင်များ", Icons.Filled.SupportAgent, Icons.Outlined.SupportAgent)
-    )
+    val bottomNavItems = remember(favoriteProperties.size) {
+        listOf(
+            BottomNavItem("home", "ရှာဖွေမည်", Icons.Filled.Home, Icons.Outlined.Home),
+            BottomNavItem("favorites", "သိမ်းဆည်းထားသော", Icons.Filled.Bookmark, Icons.Outlined.BookmarkBorder, badgeCount = favoriteProperties.size),
+            BottomNavItem("calculator", "တွက်ချက်စက်", Icons.Filled.Calculate, Icons.Outlined.Calculate),
+            BottomNavItem("agents", "အကျိုးဆောင်များ", Icons.Filled.SupportAgent, Icons.Outlined.SupportAgent)
+        )
+    }
 
     val showBottomBar = currentRoute in listOf("home", "favorites", "calculator", "agents")
 
@@ -97,8 +96,8 @@ fun RealEstateApp(
             bottomBar = {
                 AnimatedVisibility(
                     visible = showBottomBar,
-                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                    enter = fadeIn(),
+                    exit = fadeOut()
                 ) {
                     Surface(
                         color = currentTheme.headerColor,
