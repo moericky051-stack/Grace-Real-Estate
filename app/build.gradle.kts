@@ -66,8 +66,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // Version Incompatibility ကို ကျော်ပြီး ဆောက်ခိုင်းသည့် Setting ထည့်ပေးထားပါသည်
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs += listOf(
+            "-Xskip-metadata-version-check"
+        )
     }
 
     buildFeatures {
