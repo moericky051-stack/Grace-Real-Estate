@@ -3,6 +3,7 @@ import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesS
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
     id("com.google.gms.google-services")
     alias(libs.plugins.roborazzi)
@@ -54,7 +55,6 @@ android {
         }
     }
 
-    // JVM Target များကို Java 17 ဖြင့် တညီတညွတ်တည်း ညှိပေးထားပါသည်
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -67,10 +67,6 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
     }
 
     testOptions {
