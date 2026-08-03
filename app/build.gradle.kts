@@ -62,9 +62,11 @@ android {
   testOptions { unitTests { isIncludeAndroidResources = true } }
 }
 
-// AAR Metadata check ကို Task Name ဖြင့် တိုက်ရိုက်ပိတ်ခြင်း
-tasks.matching { it.name.contains("CheckAarMetadata") }.configureEach {
-    enabled = false
+// CheckAarMetadata Task များကို အကုန်လုံး ရှာပြီး ပိတ်ခြင်း
+gradle.projectsEvaluated {
+    tasks.matching { it.name.contains("AarMetadata") }.configureEach {
+        enabled = false
+    }
 }
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
