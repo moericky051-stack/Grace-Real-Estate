@@ -9,6 +9,17 @@ plugins {
   id("com.google.gms.google-services")
 }
 
+// Google Services Strategy Configuration
+googleServices { 
+  missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN 
+}
+
+// Secrets Plugin Configuration
+secrets {
+  propertiesFileName = ".env"
+  defaultPropertiesFileName = ".env.example"
+}
+
 android {
   namespace = "com.example"
   compileSdk = 36
@@ -48,27 +59,23 @@ android {
     }
     debug { signingConfig = signingConfigs.getByName("debugConfig") }
   }
+
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
   }
+
   buildFeatures {
     compose = true
     buildConfig = true
   }
+
   composeOptions {
     kotlinCompilerExtensionVersion = "1.5.8"
   }
+
   testOptions { unitTests { isIncludeAndroidResources = true } }
 }
-
-// Configure the Secrets Gradle Plugin to use .env and .env.example files
-secrets {
-  propertiesFileName = ".env"
-  defaultPropertiesFileName = ".env.example"
-}
-
-googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
 
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
@@ -81,7 +88,7 @@ dependencies {
   implementation(libs.androidx.compose.ui.graphics)
   implementation(libs.androidx.compose.ui.tooling.preview)
   
-  // core-ktx ကို 1.15.0 သို့ တိုက်ရိုက်သတ်မှတ်၍ AGP mismatch error ကို ရှင်းပေးထားပါသည်
+  // AGP Mismatch ရှောင်ရှားရန် core-ktx 1.15.0 ကို အသုံးပြုထားပါသည်
   implementation("androidx.core:core-ktx:1.15.0")
   
   implementation(libs.androidx.lifecycle.runtime.compose)
@@ -103,6 +110,7 @@ dependencies {
   implementation(libs.moshi.kotlin)
   implementation(libs.okhttp)
   implementation(libs.retrofit)
+
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)
@@ -112,13 +120,16 @@ dependencies {
   testImplementation(libs.roborazzi)
   testImplementation(libs.roborazzi.compose)
   testImplementation(libs.roborazzi.junit.rule)
+
   androidTestImplementation(platform(libs.androidx.compose.bom))
   androidTestImplementation(libs.androidx.compose.ui.test.junit4)
   androidTestImplementation(libs.androidx.espresso.core)
   androidTestImplementation(libs.androidx.junit)
   androidTestImplementation(libs.androidx.runner)
+
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
+
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
 }
